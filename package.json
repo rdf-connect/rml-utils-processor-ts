@@ -1,0 +1,23 @@
+{
+  "name": "rml-mapper-processor-ts",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@rdfjs/types": "^1.1.0",
+    "@treecg/connector-all": "^1.0.13",
+    "@treecg/connector-types": "^1.1.8",
+    "@treecg/types": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.15",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}
