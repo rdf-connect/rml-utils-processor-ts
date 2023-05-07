@@ -4,25 +4,26 @@ import { exec } from "child_process";
 import { randomUUID } from "crypto";
 import { readFile, writeFile } from "fs/promises";
 import { Parser, Store, DataFactory, Writer as N3Writer } from "n3";
+import { CronJob } from "cron";
 import { handleLogicalSource, SourceConfig } from "./mapping";
 import { getJarFile } from "./util";
 
 const { literal, namedNode } = DataFactory;
+const RML_MAPPER_RELEASE = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.1.3/rmlmapper-6.1.3-r367-all.jar";
 
-export async function rml_mapper_string(mapping: string, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string) {
+export async function rml_mapper_string(mapping: string, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string, cron?: string) {
   const simple_stream = new SimpleStream<string>();
   const content = await readFile(mapping);
   simple_stream.push(content.toString());
-  await rml_mapper_reader(simple_stream, writer, reader, referenceFormulation, iterator, jarLocation);
+  await rml_mapper_reader(simple_stream, writer, reader, referenceFormulation, iterator, jarLocation, cron);
 }
 
-const rmlMapperRelease = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.1.3/rmlmapper-6.1.3-r367-all.jar";
-export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string) {
+export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string, cron?: string) {
   const mappingFile = "/tmp/rml-" + randomUUID() + ".ttl";
   const inputFile = "/tmp/rml-input-" + randomUUID() + ".ttl";
   const outputFile = "/tmp/rml-output-" + randomUUID() + ".ttl";
 
-  const jarFile = await getJarFile(jarLocation, false, rmlMapperRelease);
+  const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
   const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
 
   const executeMapping = async () => {
@@ -55,7 +56,7 @@ export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<
     if (iterator) {
       sourceConfig.iterator = literal(iterator);
     }
-    if(referenceFormulation || iterator) {
+    if (referenceFormulation || iterator) {
       handleLogicalSource(rmlStore, { type: "file", config: fileReaderConfig }, sourceConfig);
     }
 
@@ -63,9 +64,21 @@ export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<
     const ser = writer.quadsToString(rmlStore.getQuads(null, null, null, null));
 
     await writeFile(mappingFile, ser);
-    // Execute mapping process ff no input data stream available
+    // Execute mapping process if no input data stream available
     if (!reader) {
-      await executeMapping();
+      
+      // Schedule periodic process if cron is given
+      if (cron) {
+        new CronJob({
+          cronTime: cron,
+          onTick: async () => {
+            await executeMapping();
+          },
+          start: true
+        });
+      } else {
+        await executeMapping();
+      }
     }
   };
 

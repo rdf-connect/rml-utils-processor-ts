@@ -72,9 +72,14 @@
       fnom:functionParameter rml:jarFile;
       fnom:implementationParameterPosition "5"^^xsd:int .
 
-<jarFileProperty> sh:datatype xsd:string;
-  sh:path rml:jarFile;
-  sh:name "jar File location".
+<cronMapping> 
+      a fnom:PositionParameterMapping ;
+      fnom:functionParameter js:cron;
+      fnom:implementationParameterPosition "6"^^xsd:int .
+
+<cronProperty> sh:datatype xsd:string;
+  sh:path js:cron;
+  sh:name "Cron expression".
 
 js:RmlMapperString a js:JsProcess;
   js:file <./lib/rml_mapper.js>;
@@ -82,12 +87,12 @@ js:RmlMapperString a js:JsProcess;
   js:location <./>;
   js:mapping [
     a fno:Mapping;
-    fno:parameterMapping <mappingLocationMapping>, <readerMapping>, <writerMapping>, <referenceFormulationMapping>, <iteratorMapping>, <jarFileMapping> 
+    fno:parameterMapping <mappingLocationMapping>, <readerMapping>, <writerMapping>, <referenceFormulationMapping>, <iteratorMapping>, <jarFileMapping>, <cronMapping> 
   ].
 
 [] a sh:NodeShape;
   sh:targetClass js:RmlMapperString;
-  sh:property <mappingLocationProperty>, <readerProperty>, <writerProperty>, <referenceFormulationProperty>, <iteratorProperty>, <jarFileProperty> .
+  sh:property <mappingLocationProperty>, <readerProperty>, <writerProperty>, <referenceFormulationProperty>, <iteratorProperty>, <jarFileProperty>, <cronProperty>.
 
 
 js:RmlMapperReader a js:JsProcess;
@@ -96,10 +101,10 @@ js:RmlMapperReader a js:JsProcess;
   js:location <./>;
   js:mapping [
     a fno:Mapping;
-    fno:parameterMapping <mappingReaderMapping>, <readerMapping>, <writerMapping>, <referenceFormulationMapping>, <iteratorMapping>, <jarFileMapping> 
+    fno:parameterMapping <mappingReaderMapping>, <readerMapping>, <writerMapping>, <referenceFormulationMapping>, <iteratorMapping>, <jarFileMapping>, <cronMapping> 
   ].
 
 [] a sh:NodeShape;
   sh:targetClass js:RmlMapperReader;
-  sh:property <mappingReaderProperty>, <readerProperty>, <writerProperty>, <referenceFormulationProperty>, <iteratorProperty>, <jarFileProperty>.
+  sh:property <mappingReaderProperty>, <readerProperty>, <writerProperty>, <referenceFormulationProperty>, <iteratorProperty>, <jarFileProperty>, <cronProperty>.
 
