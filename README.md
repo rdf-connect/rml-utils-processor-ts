@@ -1,2 +1,2 @@
-# rml-mapper-processor-js
-Javascript wrapper over the RML Mapper to be resused within the Connector Architecture
+# rml-mapper-processor-ts
+Typescript wrapper over the RML Mapper to be resused within the Connector Architecture
