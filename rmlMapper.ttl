@@ -7,6 +7,12 @@
 @prefix rml: <https://w3id.org/conn/rml#> . 
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 
+<> :install [
+  a :GitInstall;
+  :url <https://github.com/julianrojas87/rml-mapper-processor-ts.git>;
+  :build "npm install; npm run build";
+].
+
 <mappingLocationMapping> 
       a fnom:PositionParameterMapping ;
       fnom:functionParameter js:rml_mapping_location;
