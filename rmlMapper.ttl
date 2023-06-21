@@ -72,6 +72,12 @@
       fnom:functionParameter rml:jarFile;
       fnom:implementationParameterPosition "5"^^xsd:int .
 
+<jarFileProperty> 
+  sh:datatype xsd:string;
+  sh:path rml:jarFile;
+  sh:name "Jar file to use".
+
+
 <cronMapping> 
       a fnom:PositionParameterMapping ;
       fnom:functionParameter js:cron;
