@@ -9,7 +9,7 @@ import { handleLogicalSource, SourceConfig } from "./mapping";
 import { getJarFile } from "./util";
 
 const { literal, namedNode } = DataFactory;
-const RML_MAPPER_RELEASE = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.1.3/rmlmapper-6.1.3-r367-all.jar";
+const RML_MAPPER_RELEASE = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.2.0/rmlmapper-6.2.0-r368-all.jar";
 
 export async function rml_mapper_string(mapping: string, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string, cron?: string) {
   const simple_stream = new SimpleStream<string>();
