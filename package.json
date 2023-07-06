@@ -6,8 +6,9 @@
     "build": "tsc",
     "watch": "tsc -w"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["RML", "Connector Architecture"],
+  "author": "Arthur Vercruysse",
+  "contributors": ["Julián Rojas"],
   "license": "MIT",
   "dependencies": {
     "@rdfjs/types": "^1.1.0",
