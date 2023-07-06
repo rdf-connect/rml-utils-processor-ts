@@ -2,6 +2,7 @@
   "name": "rml-mapper-processor-ts",
   "version": "0.1.1",
   "description": "",
+  "type": "module",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w"
