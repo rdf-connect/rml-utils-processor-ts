@@ -3,7 +3,7 @@ import { BlankNode, Literal, NamedNode } from "@rdfjs/types";
 import { RDF } from "@treecg/types";
 import { CSVW, QL, RML, RMLS, RR } from "./voc";
 import { FileReaderConfig, KafkaReaderConfig, ReaderConfig } from "@treecg/connector-all";
-import { recursiveDelete } from "./util";
+import { recursiveDeleteQuad } from "./util";
 
 export type SourceConfig = {
   referenceFormulation?: NamedNode,
@@ -62,13 +62,13 @@ export function handleLogicalSource(store: Store, config: { "type": string; conf
   const mapping = mappings[0];
 
   // Delete lingering logicalSources
-  store.getObjects(mapping, RML.logicalSource, null).forEach(s => recursiveDelete(s, store));
+  store.getQuads(mapping, RML.terms.logicalSource, null, null)
+    .forEach(s => recursiveDeleteQuad(s, store));
 
   // Delete lingering logicalTargets
-  store.getQuads(null, RML.custom("logicalTarget"), null, null).forEach(q => {
-    store.delete(q);
-    recursiveDelete(q.object, store)
-  });
+  //
+  store.getQuads(mapping, RML.custom("logicalTarget"), null, null)
+    .forEach(s => recursiveDeleteQuad(s, store));
 
   const id = store.createBlankNode();
   const logicalSource = id;

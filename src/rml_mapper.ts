@@ -25,7 +25,7 @@ export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<
   const outputFile = "/tmp/rml-" + uid + "-output.ttl";
 
   const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
-  const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile} -d`;
+  const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
 
   const executeMapping = async () => {
     const proc = exec(command);
@@ -65,6 +65,7 @@ export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<
     const ser = writer.quadsToString(rmlStore.getQuads(null, null, null, null));
 
     await writeFile(mappingFile, ser);
+
     // Execute mapping process if no input data stream available
     if (!reader) {
       

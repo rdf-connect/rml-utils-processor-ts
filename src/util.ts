@@ -8,7 +8,7 @@ import stream from "stream";
 import http from "http";
 import https from "https";
 import { createUriAndTermNamespace } from "@treecg/types";
-import { Term } from "@rdfjs/types";
+import { Quad, Term } from "@rdfjs/types";
 
 const defaultLocation = "/tmp/rml-" + randomUUID() + ".jar";
 let rmlJarPromise: undefined | Promise<string> = undefined;
@@ -16,10 +16,10 @@ let rmlJarPromise: undefined | Promise<string> = undefined;
 const { namedNode } = N3.DataFactory;
 const OWL = createUriAndTermNamespace("http://www.w3.org/2002/07/owl#", "imports");
 
-export function recursiveDelete(subject: Term, store: Store) {
-  for (let q of store.getQuads(subject, null, null, null)) {
-    store.delete(q);
-    recursiveDelete(q.object, store);
+export function recursiveDeleteQuad(start: Quad, store: Store) {
+  store.delete(start);
+  for (let q of store.getQuads(start.object, null, null, null)) {
+    recursiveDeleteQuad(q, store);
   }
 }
 
