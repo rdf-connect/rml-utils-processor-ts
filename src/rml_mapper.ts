@@ -19,9 +19,10 @@ export async function rml_mapper_string(mapping: string, writer: Writer<string>,
 }
 
 export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string, cron?: string) {
-  const mappingFile = "/tmp/rml-" + randomUUID() + ".ttl";
-  const inputFile = "/tmp/rml-input-" + randomUUID() + ".ttl";
-  const outputFile = "/tmp/rml-output-" + randomUUID() + ".ttl";
+  const uid = randomUUID();
+  const mappingFile = "/tmp/rml-" + uid + "-mapping.ttl";
+  const inputFile = "/tmp/rml-" + uid + "-input.ttl";
+  const outputFile = "/tmp/rml-" + uid + "-output.ttl";
 
   const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
   const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
@@ -64,6 +65,7 @@ export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<
     const ser = writer.quadsToString(rmlStore.getQuads(null, null, null, null));
 
     await writeFile(mappingFile, ser);
+
     // Execute mapping process if no input data stream available
     if (!reader) {
       
@@ -91,8 +93,9 @@ export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<
   // Handle new incoming data;
   // Writing the data to disk and executing the rml mapper;
   // Lastly reading the data and sending it to the writer
-  const dataHandler = async (data: string) => {
-    await writeFile(inputFile, data);
+  const dataHandler = async (data: string | Object) => {
+    const data_str = data instanceof Object ? JSON.stringify(data) : data;
+    await writeFile(inputFile, data_str);
     await executeMapping();
   };
 
