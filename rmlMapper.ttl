@@ -1,116 +1,84 @@
-@prefix js: <https://w3id.org/conn/js#> .
-@prefix fno: <https://w3id.org/function/ontology#> .
-@prefix fnom: <https://w3id.org/function/vocabulary/mapping#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix : <https://w3id.org/conn#> .
-@prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix rml: <https://w3id.org/conn/rml#> . 
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
-
-<> :install [
-  a :GitInstall;
-  :url <https://github.com/julianrojas87/rml-mapper-processor-ts.git>;
-  :build "npm install; npm run build";
-].
-
-<mappingLocationMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:rml_mapping_location;
-      fnom:implementationParameterPosition "0"^^xsd:int .
-
-<mappingLocationProperty> sh:datatype xsd:string;
-  sh:path js:rml_mapping_location;
-  sh:name "Mapping file location".
-
-<mappingReaderMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:rml_mapping_reader;
-      fnom:implementationParameterPosition "0"^^xsd:int .
-
-<mappingReaderProperty> sh:class :ReaderChannel;
-  sh:path js:rml_mapping_reader;
-  sh:name "Mapping file reader".
-
-<writerMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:rml_data_output;
-      fnom:implementationParameterPosition "1"^^xsd:int .
-
-<writerProperty> sh:class :WriterChannel;
-  sh:path js:rml_data_output;
-  sh:name "Output channel".
-
-<readerMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:rml_data_input;
-      fnom:implementationParameterPosition "2"^^xsd:int .
-
-<readerProperty> sh:class :ReaderChannel;
-  sh:path js:rml_data_input;
-  sh:name "Input channel".
-
-<referenceFormulationMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter rml:referenceFormulation;
-      fnom:implementationParameterPosition "3"^^xsd:int .
-
-<referenceFormulationProperty> sh:datatype xsd:string;
-  sh:path rml:referenceFormulation;
-  sh:name "Mapping reference formulation".
-
-<iteratorMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter rml:iterator;
-      fnom:implementationParameterPosition "4"^^xsd:int .
-
-<iteratorProperty> sh:datatype xsd:string;
-  sh:path rml:iterator;
-  sh:name "Mapping iterator".
-
-<jarFileMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter rml:jarFile;
-      fnom:implementationParameterPosition "5"^^xsd:int .
-
-<jarFileProperty> 
-  sh:datatype xsd:string;
-  sh:path rml:jarFile;
-  sh:name "Jar file to use".
-
-
-<cronMapping> 
-      a fnom:PositionParameterMapping ;
-      fnom:functionParameter js:cron;
-      fnom:implementationParameterPosition "6"^^xsd:int .
-
-<cronProperty> sh:datatype xsd:string;
-  sh:path js:cron;
-  sh:name "Cron expression".
-
-js:RmlMapperString a js:JsProcess;
-  js:file <./lib/rml_mapper.js>;
-  js:function "rml_mapper_string";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping <mappingLocationMapping>, <readerMapping>, <writerMapping>, <referenceFormulationMapping>, <iteratorMapping>, <jarFileMapping>, <cronMapping> 
-  ].
-
-[] a sh:NodeShape;
-  sh:targetClass js:RmlMapperString;
-  sh:property <mappingLocationProperty>, <readerProperty>, <writerProperty>, <referenceFormulationProperty>, <iteratorProperty>, <jarFileProperty>, <cronProperty>.
-
+@prefix js: <https://w3id.org/conn/js#>.
+@prefix fno: <https://w3id.org/function/ontology#>.
+@prefix fnom: <https://w3id.org/function/vocabulary/mapping#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix : <https://w3id.org/conn#>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+@prefix rml: <https://w3id.org/conn/rml#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
 
 js:RmlMapperReader a js:JsProcess;
   js:file <./lib/rml_mapper.js>;
-  js:function "rml_mapper_reader";
+  js:function "newMapper";
   js:location <./>;
   js:mapping [
     a fno:Mapping;
-    fno:parameterMapping <mappingReaderMapping>, <readerMapping>, <writerMapping>, <referenceFormulationMapping>, <iteratorMapping>, <jarFileMapping>, <cronMapping> 
+    fno:parameterMapping [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "sources";
+      fnom:implementationParameterPosition "0"^^xsd:int;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "mappingInput";
+      fnom:implementationParameterPosition "1"^^xsd:int;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "defaultWriter";
+      fnom:implementationParameterPosition "2"^^xsd:int;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "appendMapping";
+      fnom:implementationParameterPosition "3"^^xsd:int;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "jarLocation";
+      fnom:implementationParameterPosition "4"^^xsd:int;
+    ];
   ].
 
-[] a sh:NodeShape;
+[ ] a sh:NodeShape;
+  sh:targetClass js:RmlSource;
+  sh:property [
+    sh:path js:sourceLocation;
+    sh:datatype xsd:string;
+    sh:name "location";
+    sh:maxCount 1;
+    sh:minCount 1;
+  ], [
+    sh:path js:input;
+    sh:class :ReaderChannel;
+    sh:name "dataInput";
+    sh:maxCount 1;
+    sh:minCount 1;
+  ].
+
+[ ] a sh:NodeShape;
   sh:targetClass js:RmlMapperReader;
-  sh:property <mappingReaderProperty>, <readerProperty>, <writerProperty>, <referenceFormulationProperty>, <iteratorProperty>, <jarFileProperty>, <cronProperty>.
+  sh:property [
+    sh:path js:rmlSource;
+    sh:name "sources";
+    sh:class js:RmlSource;
+  ], [
+    sh:path js:mappings;
+    sh:name "mappingInput";
+    sh:class :ReaderChannel;
+    sh:maxCount 1;
+    sh:minCount 1;
+  ], [
+    sh:path js:output;
+    sh:name "defaultWriter";
+    sh:class :WriterChannel;
+    sh:maxCount 1;
+    sh:minCount 1;
+  ], [
+    sh:path js:appendMapping;
+    sh:name "appendMapping";
+    sh:datatype xsd:boolean;
+    sh:maxCount 1;
+  ], [
+    sh:path js:rmlJar;
+    sh:name "jarLocation";
+    sh:datatype xsd:string;
+    sh:maxCount 1;
+  ].
 
