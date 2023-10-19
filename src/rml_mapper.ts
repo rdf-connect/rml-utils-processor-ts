@@ -4,6 +4,7 @@ import { readFile, writeFile } from "fs/promises";
 import {
   DataFactory,
   Parser,
+  Quad_Object,
   Quad_Predicate,
   Quad_Subject,
   Store,
@@ -13,7 +14,7 @@ import {
 import { getJarFile } from "./util";
 import { Cont, empty, match, pred, subject } from "rdf-lens";
 import { RDF } from "@treecg/types";
-import { RML } from "./voc";
+import { RML, RMLT, VOID } from "./voc";
 
 // declare all characters
 const characters =
@@ -33,9 +34,63 @@ const { literal } = DataFactory;
 const RML_MAPPER_RELEASE =
   "https://github.com/RMLio/rmlmapper-java/releases/download/v6.2.0/rmlmapper-6.2.0-r368-all.jar";
 
-const transformMapping = (input: string, sources: Source[]) => {
+const transformMapping = (
+  input: string,
+  sources: Source[],
+  targets: Target[],
+) => {
   const quads = new Parser().parse(input);
   const store = new Store(quads);
+
+  const targetLens2 = empty<Cont>()
+    .map(({ id }) => ({ subject: id }))
+    .and(
+      pred(VOID.terms.dataDump)
+        .one()
+        .map(({ id }) => ({ target: id })),
+    )
+    .map(([{ subject }, { target }]) => ({ subject, target }));
+
+  const extractTarget = pred(RMLT.terms.target).one().then(targetLens2);
+
+  const targetLens = match(undefined, RDF.terms.type, RML.terms.LogicalTarget)
+    .thenAll(subject)
+    .thenAll(extractTarget);
+  const foundTargets = targetLens.execute(quads);
+
+  console.log("Found targets", foundTargets);
+  for (let foundTarget of foundTargets) {
+    let found = false;
+    for (let target of targets) {
+      if (target.location === foundTarget.target.value) {
+        console.log(
+          "Moving location",
+          foundTarget.target.value,
+          "to",
+          target.newLocation,
+        );
+        found = true;
+        // Remove the old location
+        store.removeQuad(
+          <Quad_Subject>foundTarget.subject,
+          <Quad_Predicate>VOID.terms.dataDump,
+          <Quad_Object>foundTarget.target,
+        );
+
+        // Add the new location
+        store.addQuad(
+          <Quad_Subject>foundTarget.subject,
+          <Quad_Predicate>VOID.terms.dataDump,
+          literal("file://" + target.newLocation),
+        );
+        break;
+      }
+    }
+    if (!found) {
+      throw `Logical source ${foundTarget.subject.value} has no configured source`;
+    }
+  }
+
   // Extract logical Sources from incoming mapping
   const extractSource = empty<Cont>()
     .map(({ id }) => ({ subject: id }))
@@ -45,6 +100,7 @@ const transformMapping = (input: string, sources: Source[]) => {
         .map(({ id }) => ({ source: id.value })),
     )
     .map(([{ subject }, { source }]) => ({ subject, source }));
+
   const sourcesLens = match(
     undefined,
     RDF.terms.type,
@@ -52,6 +108,7 @@ const transformMapping = (input: string, sources: Source[]) => {
   )
     .thenAll(subject)
     .thenAll(extractSource); // Logical sources
+
   const foundSources = sourcesLens.execute(quads);
   console.log("Found sources", foundSources);
 
@@ -96,17 +153,20 @@ export type Source = {
   dataInput: Stream<string>;
   newLocation: string;
   hasData: boolean;
+  trigger: boolean;
 };
 
 export type Target = {
   location: string;
   writer: Writer<string>;
+  newLocation: string;
 };
 
 export async function newMapper(
   sources: Source[],
+  targets: Target[],
   mappingReader: Stream<string>,
-  defaultWriter: Writer<string>,
+  defaultWriter?: Writer<string>,
   appendMapping?: boolean,
   jarLocation?: string,
 ) {
@@ -117,12 +177,26 @@ export async function newMapper(
     const filename = source.location.split("/").pop();
     source.newLocation = `/tmp/rml-${uid}-input-${randomUUID()}-${filename}`;
     source.hasData = false;
+    source.trigger = !!source.trigger;
+  }
+
+  for (let target of targets) {
+    const filename = target.location.split("/").pop();
+    target.newLocation = `/tmp/rml-${uid}-output-${randomUUID()}-${filename}`;
   }
 
   const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
   const mappingLocations: string[] = [];
 
   const map = async () => {
+    for (let source of sources) {
+      // Reset the hasData property so it requires new data before it can map again
+      // Useful when multiple sources need to update
+      if (source.trigger) {
+        source.hasData = false;
+      }
+    }
+
     let out = "";
     for (let mappingFile of mappingLocations) {
       console.log("Running", mappingFile);
@@ -138,18 +212,24 @@ export async function newMapper(
       await new Promise((res) => proc.on("exit", res));
 
       out += await readFile(outputFile, { encoding: "utf8" });
+
+      for (let target of targets) {
+        const file = await readFile(target.newLocation, { encoding: "utf8" });
+        await target.writer.push(file);
+      }
       console.log("Done", mappingFile);
     }
 
     console.log("All done");
-    await defaultWriter.push(out);
-
+    if (defaultWriter) {
+      await defaultWriter.push(out);
+    }
   };
 
   mappingReader.data(async (input) => {
     console.log("Got mapping input!");
     try {
-      const newMapping = transformMapping(input, sources);
+      const newMapping = transformMapping(input, sources, targets);
       if (mappingLocations.length < 1 || appendMapping) {
         const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
         await writeFile(newLocation, newMapping, { encoding: "utf8" });
@@ -168,10 +248,12 @@ export async function newMapper(
   for (let source of sources) {
     console.log("handling source", source.location);
     source.dataInput.data(async (data) => {
+      console.log("Got data for ", source.location);
       source.hasData = true;
       await writeFile(source.newLocation, data);
 
       if (sources.every((x) => x.hasData)) {
+        console.log("Should start mapping now");
         await map();
       } else {
         console.error("Cannot start mapping, not all data has been received");
@@ -179,5 +261,9 @@ export async function newMapper(
     });
   }
 
-  return () => console.log("RML started");
+  return () => {
+    console.log("RML started");
+    map();
+  };
 }
+
