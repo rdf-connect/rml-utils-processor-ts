@@ -19,20 +19,24 @@ js:RmlMapperReader a js:JsProcess;
       fnom:implementationParameterPosition "0"^^xsd:int;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "mappingInput";
+      fnom:functionParameter "targets";
       fnom:implementationParameterPosition "1"^^xsd:int;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "defaultWriter";
+      fnom:functionParameter "mappingInput";
       fnom:implementationParameterPosition "2"^^xsd:int;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "appendMapping";
+      fnom:functionParameter "defaultWriter";
       fnom:implementationParameterPosition "3"^^xsd:int;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "jarLocation";
+      fnom:functionParameter "appendMapping";
       fnom:implementationParameterPosition "4"^^xsd:int;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "jarLocation";
+      fnom:implementationParameterPosition "5"^^xsd:int;
     ];
   ].
 
@@ -50,6 +54,27 @@ js:RmlMapperReader a js:JsProcess;
     sh:name "dataInput";
     sh:maxCount 1;
     sh:minCount 1;
+  ], [
+    sh:path js:trigger;
+    sh:datatype xsd:boolean;
+    sh:name "trigger";
+    sh:maxCount 1;
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass js:RmlTarget;
+  sh:property [
+    sh:path js:sourceLocation;
+    sh:datatype xsd:string;
+    sh:name "location";
+    sh:maxCount 1;
+    sh:minCount 1;
+  ], [
+    sh:path js:output;
+    sh:class :WriterChannel;
+    sh:name "writer";
+    sh:maxCount 1;
+    sh:minCount 1;
   ].
 
 [ ] a sh:NodeShape;
@@ -58,6 +83,10 @@ js:RmlMapperReader a js:JsProcess;
     sh:path js:rmlSource;
     sh:name "sources";
     sh:class js:RmlSource;
+  ], [
+    sh:path js:rmlTarget;
+    sh:name "targets";
+    sh:class js:RmlTarget;
   ], [
     sh:path js:mappings;
     sh:name "mappingInput";
@@ -69,7 +98,6 @@ js:RmlMapperReader a js:JsProcess;
     sh:name "defaultWriter";
     sh:class :WriterChannel;
     sh:maxCount 1;
-    sh:minCount 1;
   ], [
     sh:path js:appendMapping;
     sh:name "appendMapping";
