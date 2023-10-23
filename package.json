@@ -1,12 +1,16 @@
 {
   "name": "rml-mapper-processor-ts",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "description": "",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w"
   },
+  "files": [
+    "lib/**/*",
+    "./rmlMapper.ttl"
+  ],
   "keywords": [
     "RML",
     "Connector Architecture"
@@ -18,13 +22,15 @@
   "license": "MIT",
   "dependencies": {
     "@rdfjs/types": "^1.1.0",
-    "@treecg/connector-all": "^1.1.1",
-    "@treecg/connector-types": "^1.2.1",
     "@treecg/types": "^0.4.5",
-    "cron": "^2.3.1"
+    "cron": "^2.3.1",
+    "n3": "^1.17.1",
+    "rdf-lens": "^0.0.4"
   },
   "devDependencies": {
+    "@ajuvercr/js-runner": "^0.1.9",
     "@types/cron": "^2.0.1",
+    "@types/n3": "^1.16.1",
     "@types/node": "^20.3.3",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"

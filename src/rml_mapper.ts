@@ -1,108 +1,183 @@
-import { FileReaderConfig } from "@treecg/connector-all";
-import { SimpleStream, Stream, Writer } from "@treecg/connector-types";
+import type { Stream, Writer } from "@ajuvercr/js-runner";
 import { exec } from "child_process";
-import { randomUUID } from "crypto";
 import { readFile, writeFile } from "fs/promises";
-import { Parser, Store, DataFactory, Writer as N3Writer } from "n3";
-import { CronJob } from "cron";
-import { handleLogicalSource, SourceConfig } from "./mapping";
+import {
+  DataFactory,
+  Parser,
+  Quad_Predicate,
+  Quad_Subject,
+  Store,
+  Writer as N3Writer,
+} from "n3";
+
 import { getJarFile } from "./util";
+import { Cont, empty, match, pred, subject } from "rdf-lens";
+import { RDF } from "@treecg/types";
+import { RML } from "./voc";
 
-const { literal, namedNode } = DataFactory;
-const RML_MAPPER_RELEASE = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.2.0/rmlmapper-6.2.0-r368-all.jar";
+// declare all characters
+const characters =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-export async function rml_mapper_string(mapping: string, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string, cron?: string) {
-  const simple_stream = new SimpleStream<string>();
-  const content = await readFile(mapping);
-  simple_stream.push(content.toString());
-  await rml_mapper_reader(simple_stream, writer, reader, referenceFormulation, iterator, jarLocation, cron);
+function randomUUID(length = 8) {
+  let result = "";
+  const charactersLength = characters.length;
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+
+  return result;
 }
 
-export async function rml_mapper_reader(mapping: Stream<string>, writer: Writer<string>, reader?: Stream<string>, referenceFormulation?: string, iterator?: string, jarLocation?: string, cron?: string) {
-  const uid = randomUUID();
-  const mappingFile = "/tmp/rml-" + uid + "-mapping.ttl";
-  const inputFile = "/tmp/rml-" + uid + "-input.ttl";
-  const outputFile = "/tmp/rml-" + uid + "-output.ttl";
+const { literal } = DataFactory;
+const RML_MAPPER_RELEASE =
+  "https://github.com/RMLio/rmlmapper-java/releases/download/v6.2.0/rmlmapper-6.2.0-r368-all.jar";
 
-  const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
-  const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
+const transformMapping = (input: string, sources: Source[]) => {
+  const quads = new Parser().parse(input);
+  const store = new Store(quads);
+  // Extract logical Sources from incoming mapping
+  const extractSource = empty<Cont>()
+    .map(({ id }) => ({ subject: id }))
+    .and(
+      pred(RML.terms.source)
+        .one()
+        .map(({ id }) => ({ source: id.value })),
+    )
+    .map(([{ subject }, { source }]) => ({ subject, source }));
+  const sourcesLens = match(
+    undefined,
+    RDF.terms.type,
+    RML.terms.custom("LogicalSource"),
+  )
+    .thenAll(subject)
+    .thenAll(extractSource); // Logical sources
+  const foundSources = sourcesLens.execute(quads);
+  console.log("Found sources", foundSources);
 
-  const executeMapping = async () => {
-    const proc = exec(command);
+  // There exists a source that has no defined source, we cannot map this mapping
+  for (let foundSource of foundSources) {
+    let found = false;
+    for (let source of sources) {
+      if (source.location === foundSource.source) {
+        console.log(
+          "Moving location",
+          foundSource.source,
+          "to",
+          source.newLocation,
+        );
+        found = true;
+        // Remove the old location
+        store.removeQuad(
+          <Quad_Subject>foundSource.subject,
+          <Quad_Predicate>RML.terms.source,
+          literal(foundSource.source),
+        );
 
-    proc.stdout!.on('data', function (data) {
-      console.log("rml mapper std: ", data.toString());
-    });
-    proc.stderr!.on('data', function (data) {
-      console.error("rml mapper err:", data.toString());
-    });
-    await new Promise(res => proc.on('exit', res));
-
-    const content = await readFile(outputFile);
-    await writer.push(content.toString());
-  };
-
-  /// Handle new mapping file, setting the logical source to `inputFile`
-  const mappingHandler = async (contents: string) => {
-    const parser = new Parser();
-    const rmlStore = new Store();
-    rmlStore.addQuads(parser.parse(contents));
-
-    const fileReaderConfig: FileReaderConfig = { path: inputFile, onReplace: false };
-
-    const sourceConfig: SourceConfig = {};
-    if (referenceFormulation) {
-      sourceConfig.referenceFormulation = namedNode(referenceFormulation);
-    }
-    if (iterator) {
-      sourceConfig.iterator = literal(iterator);
-    }
-    if (referenceFormulation || iterator) {
-      handleLogicalSource(rmlStore, { type: "file", config: fileReaderConfig }, sourceConfig);
-    }
-
-    const writer = new N3Writer();
-    const ser = writer.quadsToString(rmlStore.getQuads(null, null, null, null));
-
-    await writeFile(mappingFile, ser);
-
-    // Execute mapping process if no input data stream available
-    if (!reader) {
-      
-      // Schedule periodic process if cron is given
-      if (cron) {
-        new CronJob({
-          cronTime: cron,
-          onTick: async () => {
-            await executeMapping();
-          },
-          start: true
-        });
-      } else {
-        await executeMapping();
+        // Add the new location
+        store.addQuad(
+          <Quad_Subject>foundSource.subject,
+          <Quad_Predicate>RML.terms.source,
+          literal(source.newLocation),
+        );
+        break;
       }
     }
-  };
-
-  mapping.data(mappingHandler);
-  if (mapping.lastElement) {
-    mappingHandler(mapping.lastElement);
-  }
-
-
-  // Handle new incoming data;
-  // Writing the data to disk and executing the rml mapper;
-  // Lastly reading the data and sending it to the writer
-  const dataHandler = async (data: string | Object) => {
-    const data_str = data instanceof Object ? JSON.stringify(data) : data;
-    await writeFile(inputFile, data_str);
-    await executeMapping();
-  };
-
-  if (reader) {
-    reader.data(dataHandler);
-    if (reader.lastElement) {
-      dataHandler(reader.lastElement);
+    if (!found) {
+      throw `Logical source ${foundSource.subject.value} has no configured source (${foundSource.source}) channel!`;
     }
   }
+
+  return new N3Writer().quadsToString(store.getQuads(null, null, null, null));
+};
+
+export type Source = {
+  location: string;
+  dataInput: Stream<string>;
+  newLocation: string;
+  hasData: boolean;
+};
+
+export type Target = {
+  location: string;
+  writer: Writer<string>;
+};
+
+export async function newMapper(
+  sources: Source[],
+  mappingReader: Stream<string>,
+  defaultWriter: Writer<string>,
+  appendMapping?: boolean,
+  jarLocation?: string,
+) {
+  const uid = randomUUID();
+  const outputFile = "/tmp/rml-" + uid + "-output.ttl";
+
+  for (let source of sources) {
+    const filename = source.location.split("/").pop();
+    source.newLocation = `/tmp/rml-${uid}-input-${randomUUID()}-${filename}`;
+    source.hasData = false;
+  }
+
+  const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
+  const mappingLocations: string[] = [];
+
+  const map = async () => {
+    let out = "";
+    for (let mappingFile of mappingLocations) {
+      console.log("Running", mappingFile);
+      const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
+
+      const proc = exec(command);
+      proc.stdout!.on("data", function (data) {
+        console.log("rml mapper std: ", data.toString());
+      });
+      proc.stderr!.on("data", function (data) {
+        console.error("rml mapper err:", data.toString());
+      });
+      await new Promise((res) => proc.on("exit", res));
+
+      out += await readFile(outputFile, { encoding: "utf8" });
+      console.log("Done", mappingFile);
+    }
+
+    console.log("All done");
+    await defaultWriter.push(out);
+
+  };
+
+  mappingReader.data(async (input) => {
+    console.log("Got mapping input!");
+    try {
+      const newMapping = transformMapping(input, sources);
+      if (mappingLocations.length < 1 || appendMapping) {
+        const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
+        await writeFile(newLocation, newMapping, { encoding: "utf8" });
+        mappingLocations.push(newLocation);
+        console.log("Add new mapping file", newLocation);
+      } else {
+        await writeFile(mappingLocations[0], newMapping, { encoding: "utf8" });
+        console.log("Overwriting mapping file at", mappingLocations[0]);
+      }
+    } catch (ex) {
+      console.error("Could not map incoming rml input");
+      console.error(ex);
+    }
+  });
+
+  for (let source of sources) {
+    console.log("handling source", source.location);
+    source.dataInput.data(async (data) => {
+      source.hasData = true;
+      await writeFile(source.newLocation, data);
+
+      if (sources.every((x) => x.hasData)) {
+        await map();
+      } else {
+        console.error("Cannot start mapping, not all data has been received");
+      }
+    });
+  }
+
+  return () => console.log("RML started");
 }
