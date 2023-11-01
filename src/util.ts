@@ -1,17 +1,10 @@
-import { existsSync, createReadStream } from "fs";
+import { existsSync } from "fs";
 import { randomUUID } from "crypto";
 import { exec } from "child_process";
-import * as N3 from "n3";
 
-
-import { createUriAndTermNamespace } from "@treecg/types";
 
 const defaultLocation = "/tmp/rml-" + randomUUID() + ".jar";
 let rmlJarPromise: undefined | Promise<string> = undefined;
-
-const { namedNode } = N3.DataFactory;
-const OWL = createUriAndTermNamespace("http://www.w3.org/2002/07/owl#", "imports");
-
 
 export async function getJarFile(mLocation: string | undefined, offline: boolean, url: string): Promise<string> {
   const location = mLocation || defaultLocation;

@@ -10,7 +10,6 @@ import {
     Store,
     Writer as N3Writer,
 } from "n3";
-import { unlink } from "fs/promises";
 import { getJarFile } from "../util";
 import { Cont, empty, match, pred, subject } from "rdf-lens";
 import { RDF } from "@treecg/types";
@@ -42,7 +41,6 @@ export async function rmlMapper(
     targets: Target[],
     mappingReader: Stream<string>,
     defaultWriter?: Writer<string>,
-    appendMapping?: boolean,
     jarLocation?: string,
 ) {
     const uid = randomUUID();
@@ -70,15 +68,11 @@ export async function rmlMapper(
         console.log("Got mapping input!");
         try {
             const newMapping = transformMapping(input, sources, targets);
-            if (mappingLocations.length < 1 || appendMapping) {
-                const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
-                await writeFile(newLocation, newMapping, { encoding: "utf8" });
-                mappingLocations.push(newLocation);
-                console.log("Add new mapping file", newLocation);
-            } else {
-                await writeFile(mappingLocations[0], newMapping, { encoding: "utf8" });
-                console.log("Overwriting mapping file at", mappingLocations[0]);
-            }
+            const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
+            await writeFile(newLocation, newMapping, { encoding: "utf8" });
+            mappingLocations.push(newLocation);
+            console.log("Add new mapping file", newLocation);
+
         } catch (ex) {
             console.error("Could not map incoming rml input");
             console.error(ex);
@@ -87,6 +81,7 @@ export async function rmlMapper(
         // We assume mappings to be static and only proceed to execute them once we have them all
         for (let source of sources) {
             console.log("handling source", source.location);
+            // Process raw data input streams
             source.dataInput.data(async (data) => {
                 console.log("Got data for ", source.location);
                 source.hasData = true;
@@ -96,11 +91,11 @@ export async function rmlMapper(
                     // We made sure that all declared logical sources are present
                     console.log("Start mapping now");
                     await executeMappings(
-                        sources, 
-                        mappingLocations, 
-                        jarFile, 
-                        outputFile, 
-                        targets, 
+                        sources,
+                        mappingLocations,
+                        jarFile,
+                        outputFile,
+                        targets,
                         defaultWriter
                     );
                 } else {
@@ -236,8 +231,8 @@ function transformMapping(input: string, sources: Source[], targets: Target[],) 
 }
 
 async function executeMappings(
-    sources: Source[], 
-    mappingLocations: string[], 
+    sources: Source[],
+    mappingLocations: string[],
     jarFile: string,
     outputFile: string,
     targets: Target[],

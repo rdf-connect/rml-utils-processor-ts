@@ -65,12 +65,8 @@ js:RMLMapperReader a js:JsProcess;
       fnom:implementationParameterPosition "3"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "appendMapping";
-      fnom:implementationParameterPosition "4"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
       fnom:functionParameter "jarLocation";
-      fnom:implementationParameterPosition "5"^^xsd:integer;
+      fnom:implementationParameterPosition "4"^^xsd:integer;
     ];
   ].
 
@@ -131,11 +127,6 @@ js:RMLMapperReader a js:JsProcess;
     sh:path js:output;
     sh:name "defaultWriter";
     sh:class :WriterChannel;
-    sh:maxCount 1;
-  ], [
-    sh:path js:appendMapping;
-    sh:name "appendMapping";
-    sh:datatype xsd:boolean;
     sh:maxCount 1;
   ], [
     sh:path js:rmlJar;
