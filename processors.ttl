@@ -4,39 +4,73 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix : <https://w3id.org/conn#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
-@prefix rml: <https://w3id.org/conn/rml#>.
-@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix dc: <http://purl.org/dc/terms/>.
 
-js:RmlMapperReader a js:JsProcess;
-  js:file <./lib/rml_mapper.js>;
-  js:function "newMapper";
+js:Y2R a js:JsProcess;
+  dc:title "yarrrml processor";
+  dc:description "The YARRRML processor transforms YARRRML documents into RML mapping documents.";
+  js:file <./lib/yarrrml/yarrrml.js>;
+  js:function "yarrrml2rml";
+  js:location <./>;
+  js:mapping [
+    a fno:Mapping;
+    fno:parameterMapping [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "Data input channel";
+      fnom:implementationParameterPosition "0"^^xsd:int
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "Data output channel";
+      fnom:implementationParameterPosition "1"^^xsd:int
+    ]
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass js:Y2R;
+  sh:property [
+    sh:class :ReaderChannel;
+    sh:path js:input;
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:name "Data input channel"
+  ], [
+    sh:class :WriterChannel;
+    sh:path js:output;
+    sh:maxCount 1;
+    sh:minCount 1;
+    sh:name "Data output channel"
+  ].
+
+js:RMLMapperReader a js:JsProcess;
+  js:file <./lib/rml/rml.js>;
+  js:function "rmlMapper";
   js:location <./>;
   js:mapping [
     a fno:Mapping;
     fno:parameterMapping [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "sources";
-      fnom:implementationParameterPosition "0"^^xsd:int;
+      fnom:implementationParameterPosition "0"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "targets";
-      fnom:implementationParameterPosition "1"^^xsd:int;
+      fnom:implementationParameterPosition "1"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "mappingInput";
-      fnom:implementationParameterPosition "2"^^xsd:int;
+      fnom:implementationParameterPosition "2"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "defaultWriter";
-      fnom:implementationParameterPosition "3"^^xsd:int;
+      fnom:implementationParameterPosition "3"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "appendMapping";
-      fnom:implementationParameterPosition "4"^^xsd:int;
+      fnom:implementationParameterPosition "4"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "jarLocation";
-      fnom:implementationParameterPosition "5"^^xsd:int;
+      fnom:implementationParameterPosition "5"^^xsd:integer;
     ];
   ].
 
@@ -64,7 +98,7 @@ js:RmlMapperReader a js:JsProcess;
 [ ] a sh:NodeShape;
   sh:targetClass js:RmlTarget;
   sh:property [
-    sh:path js:sourceLocation;
+    sh:path js:targetLocation;
     sh:datatype xsd:string;
     sh:name "location";
     sh:maxCount 1;
@@ -78,7 +112,7 @@ js:RmlMapperReader a js:JsProcess;
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:RmlMapperReader;
+  sh:targetClass js:RMLMapperReader;
   sh:property [
     sh:path js:rmlSource;
     sh:name "sources";

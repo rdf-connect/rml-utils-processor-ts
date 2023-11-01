@@ -1,0 +1,1 @@
+declare module '@rmlio/yarrrml-parser/lib/rml-generator';

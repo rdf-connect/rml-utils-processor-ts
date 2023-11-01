@@ -43,6 +43,12 @@ export const RR = createUriAndTermNamespace(
   "IRI",
 );
 
+export const FNML = createUriAndTermNamespace(
+  "http://semweb.mmlab.be/ns/fnml#",
+  "FunctionTermMap",
+  "functionValue",
+);
+
 export const QL = createUriAndTermNamespace(
   "http://semweb.mmlab.be/ns/ql#",
   "JSONPath",
