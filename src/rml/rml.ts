@@ -37,9 +37,9 @@ export type Target = {
 };
 
 export async function rmlMapper(
-    sources: Source[],
-    targets: Target[],
     mappingReader: Stream<string>,
+    sources?: Source[],
+    targets?: Target[],
     defaultWriter?: Writer<string>,
     jarLocation?: string,
 ) {
@@ -47,17 +47,21 @@ export async function rmlMapper(
     const outputFile = "/tmp/rml-" + uid + "-output.ttl";
 
     // Iterate over declared logical sources and organize them in a temporal location
-    for (let source of sources) {
-        const filename = source.location.split("/").pop();
-        source.newLocation = `/tmp/rml-${uid}-input-${randomUUID()}-${filename}`;
-        source.hasData = false;
-        source.trigger = !!source.trigger;
+    if (sources) {
+        for (let source of sources) {
+            const filename = source.location.split("/").pop();
+            source.newLocation = `/tmp/rml-${uid}-input-${randomUUID()}-${filename}`;
+            source.hasData = false;
+            source.trigger = !!source.trigger;
+        }
     }
 
     // Iterate over declared logical targets and organize them in a temporal location
-    for (let target of targets) {
-        const filename = target.location.split("/").pop();
-        target.newLocation = `/tmp/rml-${uid}-output-${randomUUID()}-${filename}`;
+    if (targets) {
+        for (let target of targets) {
+            const filename = target.location.split("/").pop();
+            target.newLocation = `/tmp/rml-${uid}-output-${randomUUID()}-${filename}`;
+        }
     }
 
     const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
@@ -77,31 +81,45 @@ export async function rmlMapper(
             console.error("Could not map incoming rml input");
             console.error(ex);
         }
-    }).on("end", () => {
+    }).on("end", async () => {
         // We assume mappings to be static and only proceed to execute them once we have them all
-        for (let source of sources) {
-            console.log("handling source", source.location);
-            // Process raw data input streams
-            source.dataInput.data(async (data) => {
-                console.log("Got data for ", source.location);
-                source.hasData = true;
-                await writeFile(source.newLocation, data);
+        if (sources) {
+            for (let source of sources) {
+                console.log("handling source", source.location);
+                // Process raw data input streams
+                source.dataInput.data(async (data) => {
+                    console.log("Got data for ", source.location);
+                    source.hasData = true;
+                    await writeFile(source.newLocation, data);
 
-                if (sources.every((x) => x.hasData)) {
-                    // We made sure that all declared logical sources are present
-                    console.log("Start mapping now");
-                    await executeMappings(
-                        sources,
-                        mappingLocations,
-                        jarFile,
-                        outputFile,
-                        targets,
-                        defaultWriter
-                    );
-                } else {
-                    console.error("Cannot start mapping, not all data has been received");
-                }
-            });
+                    if (sources.every((x) => x.hasData)) {
+                        // We made sure that all declared logical sources are present
+                        console.log("Start mapping now");
+                        await executeMappings(
+                            mappingLocations,
+                            jarFile,
+                            outputFile,
+                            sources,
+                            targets,
+                            defaultWriter
+                        );
+                    } else {
+                        console.error("Cannot start mapping, not all data has been received");
+                    }
+                });
+            }
+        } else {
+            // No declared logical sources means that raw data access is delegated to the RML engine.
+            // For example, as in the case of remote RDBs or HTTP APIs
+            console.log("Start mapping now");
+            await executeMappings(
+                mappingLocations,
+                jarFile,
+                outputFile,
+                sources,
+                targets,
+                defaultWriter
+            );
         }
     });
 
@@ -120,7 +138,7 @@ function randomUUID(length = 8) {
     return result;
 }
 
-function transformMapping(input: string, sources: Source[], targets: Target[],) {
+function transformMapping(input: string, sources?: Source[], targets?: Target[],) {
     const quads = new Parser().parse(input);
     const store = new Store(quads);
 
@@ -135,41 +153,43 @@ function transformMapping(input: string, sources: Source[], targets: Target[],) 
 
     const extractTarget = pred(RMLT.terms.target).one().then(targetLens2);
 
-    const targetLens = match(undefined, RDF.terms.type, RML.terms.LogicalTarget)
+    const targetLens = match(undefined, RDF.terms.type, RMLT.terms.LogicalTarget)
         .thenAll(subject)
         .thenAll(extractTarget);
     const foundTargets = targetLens.execute(quads);
 
     console.log("Found targets", foundTargets);
     for (let foundTarget of foundTargets) {
-        let found = false;
-        for (let target of targets) {
-            if (target.location === foundTarget.target.value) {
-                console.log(
-                    "Moving location",
-                    foundTarget.target.value,
-                    "to",
-                    target.newLocation,
-                );
-                found = true;
-                // Remove the old location
-                store.removeQuad(
-                    <Quad_Subject>foundTarget.subject,
-                    <Quad_Predicate>VOID.terms.dataDump,
-                    <Quad_Object>foundTarget.target,
-                );
+        if (targets) {
+            let found = false;
+            for (let target of targets) {
+                if (target.location === foundTarget.target.value) {
+                    console.log(
+                        "Moving location",
+                        foundTarget.target.value,
+                        "to",
+                        target.newLocation,
+                    );
+                    found = true;
+                    // Remove the old location
+                    store.removeQuad(
+                        <Quad_Subject>foundTarget.subject,
+                        <Quad_Predicate>VOID.terms.dataDump,
+                        <Quad_Object>foundTarget.target,
+                    );
 
-                // Add the new location
-                store.addQuad(
-                    <Quad_Subject>foundTarget.subject,
-                    <Quad_Predicate>VOID.terms.dataDump,
-                    literal("file://" + target.newLocation),
-                );
-                break;
+                    // Add the new location
+                    store.addQuad(
+                        <Quad_Subject>foundTarget.subject,
+                        <Quad_Predicate>VOID.terms.dataDump,
+                        literal("file://" + target.newLocation),
+                    );
+                    break;
+                }
             }
-        }
-        if (!found) {
-            throw `Logical source ${foundTarget.subject.value} has no configured source`;
+            if (!found) {
+                throw `Logical source ${foundTarget.subject.value} has no configured source`;
+            }
         }
     }
 
@@ -196,34 +216,36 @@ function transformMapping(input: string, sources: Source[], targets: Target[],) 
 
     // There exists a source that has no defined source, we cannot map this mapping
     for (let foundSource of foundSources) {
-        let found = false;
-        for (let source of sources) {
-            if (source.location === foundSource.source) {
-                console.log(
-                    "Moving location",
-                    foundSource.source,
-                    "to",
-                    source.newLocation,
-                );
-                found = true;
-                // Remove the old location
-                store.removeQuad(
-                    <Quad_Subject>foundSource.subject,
-                    <Quad_Predicate>RML.terms.source,
-                    literal(foundSource.source),
-                );
+        if (sources) {
+            let found = false;
+            for (let source of sources) {
+                if (source.location === foundSource.source) {
+                    console.log(
+                        "Moving location",
+                        foundSource.source,
+                        "to",
+                        source.newLocation,
+                    );
+                    found = true;
+                    // Remove the old location
+                    store.removeQuad(
+                        <Quad_Subject>foundSource.subject,
+                        <Quad_Predicate>RML.terms.source,
+                        literal(foundSource.source),
+                    );
 
-                // Add the new location
-                store.addQuad(
-                    <Quad_Subject>foundSource.subject,
-                    <Quad_Predicate>RML.terms.source,
-                    literal(source.newLocation),
-                );
-                break;
+                    // Add the new location
+                    store.addQuad(
+                        <Quad_Subject>foundSource.subject,
+                        <Quad_Predicate>RML.terms.source,
+                        literal(source.newLocation),
+                    );
+                    break;
+                }
             }
-        }
-        if (!found) {
-            throw `Logical source ${foundSource.subject.value} has no configured source (${foundSource.source}) channel!`;
+            if (!found) {
+                throw `Logical source ${foundSource.subject.value} has no configured source (${foundSource.source}) channel!`;
+            }
         }
     }
 
@@ -231,18 +253,20 @@ function transformMapping(input: string, sources: Source[], targets: Target[],) 
 }
 
 async function executeMappings(
-    sources: Source[],
     mappingLocations: string[],
     jarFile: string,
     outputFile: string,
-    targets: Target[],
+    sources?: Source[],
+    targets?: Target[],
     defaultWriter?: Writer<string>
 ) {
-    for (let source of sources) {
-        // Reset the hasData property so it requires new data before it can map again
-        // Useful when multiple sources need to update
-        if (source.trigger) {
-            source.hasData = false;
+    if (sources) {
+        for (let source of sources) {
+            // Reset the hasData property so it requires new data before it can map again
+            // Useful when multiple sources need to update
+            if (source.trigger) {
+                source.hasData = false;
+            }
         }
     }
 
@@ -262,9 +286,11 @@ async function executeMappings(
 
         out += await readFile(outputFile, { encoding: "utf8" });
 
-        for (let target of targets) {
-            const file = await readFile(target.newLocation, { encoding: "utf8" });
-            await target.writer.push(file);
+        if (targets) {
+            for (let target of targets) {
+                const file = await readFile(target.newLocation, { encoding: "utf8" });
+                await target.writer.push(file);
+            }
         }
         console.log("Done", mappingFile);
     }

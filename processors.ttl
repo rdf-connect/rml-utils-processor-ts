@@ -49,15 +49,15 @@ js:RMLMapperReader a js:JsProcess;
     a fno:Mapping;
     fno:parameterMapping [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "sources";
+      fnom:functionParameter "mappingInput";
       fnom:implementationParameterPosition "0"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "targets";
+      fnom:functionParameter "sources";
       fnom:implementationParameterPosition "1"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "mappingInput";
+      fnom:functionParameter "targets";
       fnom:implementationParameterPosition "2"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
@@ -110,28 +110,32 @@ js:RMLMapperReader a js:JsProcess;
 [ ] a sh:NodeShape;
   sh:targetClass js:RMLMapperReader;
   sh:property [
+    sh:path js:mappings;
+    sh:name "mappingInput";
+    sh:class :ReaderChannel;
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
     sh:path js:rmlSource;
     sh:name "sources";
     sh:class js:RmlSource;
+    sh:minCount 0
   ], [
     sh:path js:rmlTarget;
     sh:name "targets";
     sh:class js:RmlTarget;
-  ], [
-    sh:path js:mappings;
-    sh:name "mappingInput";
-    sh:class :ReaderChannel;
-    sh:maxCount 1;
-    sh:minCount 1;
+    sh:minCount 0
   ], [
     sh:path js:output;
     sh:name "defaultWriter";
     sh:class :WriterChannel;
-    sh:maxCount 1;
+    sh:minCount 1;
+    sh:maxCount 1
   ], [
     sh:path js:rmlJar;
     sh:name "jarLocation";
     sh:datatype xsd:string;
-    sh:maxCount 1;
+    sh:minCount 0;
+    sh:maxCount 1
   ].
 
