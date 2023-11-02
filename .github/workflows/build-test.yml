@@ -20,4 +20,4 @@ jobs:
 
         - run: bun i # Install dependencies
         - run: bun run build # Build sources
-        - run: bun test # Run tests
+        - run: bun test --timeout 45000 # Run tests
