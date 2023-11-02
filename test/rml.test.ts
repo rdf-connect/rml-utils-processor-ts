@@ -7,18 +7,19 @@ import { RDF, RDFS } from "../src/voc";
 
 describe("Functional tests for the rmlMapper Connector Architecture function", async () => {
     const prefixes = `
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix rr: <http://www.w3.org/ns/r2rml#> .
-@prefix rml: <http://semweb.mmlab.be/ns/rml#> .
-@prefix rmlt: <http://semweb.mmlab.be/ns/rml-target#> .
-@prefix ql: <http://semweb.mmlab.be/ns/ql#> .
-@prefix void: <http://rdfs.org/ns/void#> .
-@prefix formats: <http://www.w3.org/ns/formats/> .
-@prefix td: <https://www.w3.org/2019/wot/td#> .
-@prefix htv: <http://www.w3.org/2011/http#> .
-@prefix hctl: <https://www.w3.org/2019/wot/hypermedia#> .
-@prefix ex: <http://example.org/> .`;
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @prefix rr: <http://www.w3.org/ns/r2rml#> .
+        @prefix rml: <http://semweb.mmlab.be/ns/rml#> .
+        @prefix rmlt: <http://semweb.mmlab.be/ns/rml-target#> .
+        @prefix ql: <http://semweb.mmlab.be/ns/ql#> .
+        @prefix void: <http://rdfs.org/ns/void#> .
+        @prefix formats: <http://www.w3.org/ns/formats/> .
+        @prefix td: <https://www.w3.org/2019/wot/td#> .
+        @prefix htv: <http://www.w3.org/2011/http#> .
+        @prefix hctl: <https://www.w3.org/2019/wot/hypermedia#> .
+        @prefix ex: <http://example.org/> .
+    `;
 
     test("Mapping process with declared logical sources and targets", async () => {
         const rmlDoc = `
