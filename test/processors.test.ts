@@ -80,9 +80,9 @@ describe("Tests for RML-related processors", async () => {
 
         const argss = extractSteps(env, quads, config);
         expect(argss.length).toBe(1);
-        expect(argss[0].length).toBe(6);
+        expect(argss[0].length).toBe(5);
 
-        const [[rmlSource, rmlTarget, mappings, output, appendMapping, rmlJar]] = argss;
+        const [[rmlSource, rmlTarget, mappings, output, rmlJar]] = argss;
         
         expect(rmlSource[0].location).toBe("dataset/data.xml");
         testReader(rmlSource[0].dataInput);
@@ -93,7 +93,6 @@ describe("Tests for RML-related processors", async () => {
 
         testReader(mappings);
         testWriter(output);
-        expect(appendMapping).toBeTruthy();
         expect(rmlJar).toBe(resolve("./rmlmapper-6.3.0-r0-all.jar"));
 
         await checkProc(env.file, env.func);
