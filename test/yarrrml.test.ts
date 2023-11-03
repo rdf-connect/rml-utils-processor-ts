@@ -4,21 +4,22 @@ import { yarrrml2rml } from "../src/yarrrml/yarrrml";
 import { Parser, Store } from "n3";
 import { RDF, RML, RR } from "../src/voc";
 
-describe("Functional tests for the yarrrml2rml Connector Architecture function", async () => {
+describe("Functional tests for the yarrrml2rml Connector Architecture function", () => {
     const yarrrmlDoc = `
-prefixes: 
-    ex: "http://example.org/"
-    rdfs: "http://www.w3.org/2000/01/rdf-schema#"
+        prefixes: 
+            ex: "http://example.org/"
+            rdfs: "http://www.w3.org/2000/01/rdf-schema#"
 
-mappings:
-    test-mapping:
-        sources:
-            - ["dataset/data.xml~xpath","/data"]
-        s: ex:$(@id)
-        po:
-            - [a, ex:Entity]
-            - [rdfs:label, $(@label)]
-        graph: ex:myNamedGraph`;
+        mappings:
+            test-mapping:
+                sources:
+                    - ["dataset/data.xml~xpath","/data"]
+                s: ex:$(@id)
+                po:
+                    - [a, ex:Entity]
+                    - [rdfs:label, $(@label)]
+                graph: ex:myNamedGraph
+    `;
 
     test("Given a YARRRML document it produces RML triples", async () => {
         const reader = new SimpleStream<string>();

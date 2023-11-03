@@ -5,7 +5,7 @@ import { deleteAsync } from "del";
 import { rmlMapper, Source, Target } from "../src/rml/rml";
 import { RDF, RDFS } from "../src/voc";
 
-describe("Functional tests for the rmlMapper Connector Architecture function", async () => {
+describe("Functional tests for the rmlMapper Connector Architecture function", () => {
     const prefixes = `
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
         @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -21,65 +21,66 @@ describe("Functional tests for the rmlMapper Connector Architecture function", a
         @prefix ex: <http://example.org/> .
     `;
 
-    test("Mapping process with declared logical sources and targets", async () => {
-        const rmlDoc = `
-            ${prefixes}
-            ex:map_test-mapping_000 a rr:TriplesMap ;
-                rdfs:label "test-mapping" ;
-                rml:logicalSource [
-                    a rml:LogicalSource ;
-                    rml:source "dataset/data.xml" ;
-                    rml:iterator "//data" ;
-                    rml:referenceFormulation ql:XPath
-                ] ;
-                rr:subjectMap [
-                    a rr:SubjectMap ;
-                    rr:template "http://example.org/{@id}" ;
-                    rml:logicalTarget [
-                        a rmlt:LogicalTarget ;
-                        rmlt:serialization formats:N-Quads ;
-                        rmlt:target [
-                            a void:Dataset ;
-                            void:dataDump <file:///results/output.nq>
-                        ]
-                    ] ;
-                    rr:graphMap [
-                        a rr:GraphMap ;
-                        rr:constant "http://example.org/myNamedGraph"
+    const rmlDoc = `
+        ${prefixes}
+        ex:map_test-mapping_000 a rr:TriplesMap ;
+            rdfs:label "test-mapping" ;
+            rml:logicalSource [
+                a rml:LogicalSource ;
+                rml:source "dataset/data.xml" ;
+                rml:iterator "//data" ;
+                rml:referenceFormulation ql:XPath
+            ] ;
+            rr:subjectMap [
+                a rr:SubjectMap ;
+                rr:template "http://example.org/{@id}" ;
+                rml:logicalTarget [
+                    a rmlt:LogicalTarget ;
+                    rmlt:serialization formats:N-Quads ;
+                    rmlt:target [
+                        a void:Dataset ;
+                        void:dataDump <file:///results/output.nq>
                     ]
                 ] ;
-                rr:predicateObjectMap [
-                    a rr:PredicateObjectMap ;
-                    rr:predicateMap [
-                        a rr:PredicateMap ;
-                        rr:constant "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-                    ] ;
-                    rr:objectMap [
-                        a rr:ObjectMap ;
-                        rr:constant <http://example.org/Entity> ;
-                        rr:termType rr:IRI
-                    ]
+                rr:graphMap [
+                    a rr:GraphMap ;
+                    rr:constant "http://example.org/myNamedGraph"
+                ]
+            ] ;
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicateMap [
+                    a rr:PredicateMap ;
+                    rr:constant "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
                 ] ;
-                rr:predicateObjectMap [
-                    a rr:PredicateObjectMap ;
-                    rr:predicateMap [
-                        a rr:PredicateMap ;
-                        rr:constant rdfs:label
-                    ] ;
-                    rr:objectMap [
-                        a rr:ObjectMap ;
-                        rml:reference "@label" ;
-                        rr:termType rr:Literal
-                    ]
-                ] .
-        `;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rr:constant <http://example.org/Entity> ;
+                    rr:termType rr:IRI
+                ]
+            ] ;
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicateMap [
+                    a rr:PredicateMap ;
+                    rr:constant rdfs:label
+                ] ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rml:reference "@label" ;
+                    rr:termType rr:Literal
+                ]
+            ] .
+    `;
 
-        const rawData = `
-            <resource>
-                <data id="001" label="some data"></data>
-                <data id="002" label="some other data"></data>
-            </resource>
-        `;
+    const rawData = `
+        <resource>
+            <data id="001" label="some data"></data>
+            <data id="002" label="some other data"></data>
+        </resource>
+    `;
+
+    test("Mapping process with declared logical sources and targets", async () => {
         // Define function parameters
         const mappingReader = new SimpleStream<string>();
         const sourceInputStream = new SimpleStream<string>();
@@ -132,8 +133,61 @@ describe("Functional tests for the rmlMapper Connector Architecture function", a
         await sourceInputStream.push(rawData);
     });
 
+    test("Mapping process with data inputs arriving before mappings", async () => {
+        // Define function parameters
+        const mappingReader = new SimpleStream<string>();
+        const sourceInputStream = new SimpleStream<string>();
+        const targetOutputStream = new SimpleStream<string>();
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                newLocation: "",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: false
+            }
+        ];
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                newLocation: "",
+                writer: targetOutputStream
+            }
+        ];
+
+        // Check output
+        targetOutputStream.data((data: string) => {
+            const store = new Store();
+            store.addQuads(new Parser().parse(data));
+
+            expect(store.getQuads(null, null, null, null).length).toBe(4);
+            expect(store.getQuads(
+                "http://example.org/001",
+                RDF.type,
+                null,
+                "http://example.org/myNamedGraph").length
+            ).toBe(1);
+            expect(store.getQuads(
+                "http://example.org/002",
+                RDFS.label,
+                null,
+                "http://example.org/myNamedGraph").length
+            ).toBe(1);
+        });
+
+        // Execute function
+        await rmlMapper(mappingReader, sources, targets, undefined, "/tmp/rmlMapper.jar");
+
+        // Push raw input data first
+        await sourceInputStream.push(rawData);
+
+        // Push mappings input data
+        await mappingReader.push(rmlDoc);
+        await mappingReader.end();
+    });
+
     test("Mapping process without declared logical sources and default output", async () => {
-        const rmlDoc = `
+        const rmlDoc2 = `
             ${prefixes}
             ex:map_test-mapping_000 a rr:TriplesMap ;
                 rdfs:label "test-mapping" ;
@@ -203,7 +257,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", a
         await rmlMapper(mappingReader, undefined, undefined, outputStream, "/tmp/rmlMapper.jar");
 
         // Push mappings input data
-        await mappingReader.push(rmlDoc);
+        await mappingReader.push(rmlDoc2);
         await mappingReader.end();
 
     });

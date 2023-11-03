@@ -10,15 +10,13 @@ import {
     Store,
     Writer as N3Writer,
 } from "n3";
-import { getJarFile } from "../util";
+import { randomUUID, getJarFile } from "../util";
 import { Cont, empty, match, pred, subject } from "rdf-lens";
 import { RDF } from "@treecg/types";
 import { RML, RMLT, VOID } from "../voc";
 
 const { literal } = DataFactory;
 
-// declare all characters
-const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const RML_MAPPER_RELEASE =
     "https://github.com/RMLio/rmlmapper-java/releases/download/v6.2.2/rmlmapper-6.2.2-r371-all.jar";
 
@@ -69,26 +67,26 @@ export async function rmlMapper(
 
     // Read mapping input stream
     mappingReader.data(async (input) => {
-        console.log("Got mapping input!");
+        console.log("[rmlMapper processor] ", "Got mapping input!");
         try {
             const newMapping = transformMapping(input, sources, targets);
             const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
             await writeFile(newLocation, newMapping, { encoding: "utf8" });
             mappingLocations.push(newLocation);
-            console.log("Add new mapping file", newLocation);
+            console.log("[rmlMapper processor] ", "Add new mapping file", newLocation);
 
         } catch (ex) {
-            console.error("Could not map incoming rml input");
+            console.error("[rmlMapper processor] ", "Could not map incoming rml input");
             console.error(ex);
         }
     }).on("end", async () => {
         // We assume mappings to be static and only proceed to execute them once we have them all
         if (sources) {
             for (let source of sources) {
-                console.log("handling source", source.location);
+                console.log("[rmlMapper processor] ", "Handling source", source.location);
                 // Process raw data input streams
-                source.dataInput.data(async (data) => {
-                    console.log("Got data for ", source.location);
+                const handleSourceData = async (data: string) => {
+                    console.log("[rmlMapper processor] ", "Got data for ", source.location);
                     source.hasData = true;
                     await writeFile(source.newLocation, data);
 
@@ -104,14 +102,21 @@ export async function rmlMapper(
                             defaultWriter
                         );
                     } else {
-                        console.error("Cannot start mapping, not all data has been received");
+                        console.error("[rmlMapper processor] ", "Cannot start mapping, not all data has been received");
                     }
-                });
+                };
+
+                // Register data event handler
+                source.dataInput.data(data => handleSourceData(data));
+                // Process data that has already been pushed to the input stream
+                if (source.dataInput.lastElement) {
+                    await handleSourceData(source.dataInput.lastElement);
+                }
             }
         } else {
             // No declared logical sources means that raw data access is delegated to the RML engine.
             // For example, as in the case of remote RDBs or HTTP APIs
-            console.log("Start mapping now");
+            console.log("[rmlMapper processor] ", "Start mapping now");
             await executeMappings(
                 mappingLocations,
                 jarFile,
@@ -122,20 +127,6 @@ export async function rmlMapper(
             );
         }
     });
-
-    return () => {
-        console.log("RML mapping process started...");
-    };
-}
-
-function randomUUID(length = 8) {
-    let result = "";
-    const charactersLength = characters.length;
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-
-    return result;
 }
 
 function transformMapping(input: string, sources?: Source[], targets?: Target[],) {
@@ -158,13 +149,13 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
         .thenAll(extractTarget);
     const foundTargets = targetLens.execute(quads);
 
-    console.log("Found targets", foundTargets);
     for (let foundTarget of foundTargets) {
         if (targets) {
             let found = false;
             for (let target of targets) {
                 if (target.location === foundTarget.target.value) {
                     console.log(
+                        "[rmlMapper processor] ", 
                         "Moving location",
                         foundTarget.target.value,
                         "to",
@@ -212,7 +203,6 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
         .thenAll(extractSource); // Logical sources
 
     const foundSources = sourcesLens.execute(quads);
-    console.log("Found sources", foundSources);
 
     // There exists a source that has no defined source, we cannot map this mapping
     for (let foundSource of foundSources) {
@@ -221,6 +211,7 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
             for (let source of sources) {
                 if (source.location === foundSource.source) {
                     console.log(
+                        "[rmlMapper processor] ",
                         "Moving location",
                         foundSource.source,
                         "to",
@@ -272,15 +263,15 @@ async function executeMappings(
 
     let out = "";
     for (let mappingFile of mappingLocations) {
-        console.log("Running", mappingFile);
+        console.log("[rmlMapper processor] ", "Running", mappingFile);
         const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
 
         const proc = exec(command);
         proc.stdout!.on("data", function (data) {
-            console.log("rml mapper std: ", data.toString());
+            console.log("[rmlMapper processor] ", "rml mapper std: ", data.toString());
         });
         proc.stderr!.on("data", function (data) {
-            console.error("rml mapper err:", data.toString());
+            console.error("[rmlMapper processor] ", "rml mapper err:", data.toString());
         });
         await new Promise((res) => proc.on("exit", res));
 
@@ -292,7 +283,7 @@ async function executeMappings(
                 await target.writer.push(file);
             }
         }
-        console.log("Done", mappingFile);
+        console.log("[rmlMapper processor] ", "Done", mappingFile);
     }
 
     console.log("All done");
