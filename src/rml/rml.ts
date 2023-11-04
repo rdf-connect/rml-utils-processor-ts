@@ -34,6 +34,11 @@ export type Target = {
     newLocation: string;
 };
 
+type SourceDataUpdate = {
+    source: Source,
+    data: string
+};
+
 export async function rmlMapper(
     mappingReader: Stream<string>,
     sources?: Source[],
@@ -43,6 +48,8 @@ export async function rmlMapper(
 ) {
     const uid = randomUUID();
     const outputFile = "/tmp/rml-" + uid + "-output.ttl";
+    const sourceBuffer: SourceDataUpdate[] = [];
+    let executing: boolean = false;
 
     // Iterate over declared logical sources and organize them in a temporal location
     if (sources) {
@@ -73,7 +80,7 @@ export async function rmlMapper(
             const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
             await writeFile(newLocation, newMapping, { encoding: "utf8" });
             mappingLocations.push(newLocation);
-            console.log("[rmlMapper processor]", "Add new mapping file", newLocation);
+            console.log("[rmlMapper processor]", "Added new mapping file location", newLocation);
 
         } catch (ex) {
             console.error("[rmlMapper processor]", "Could not map incoming rml input");
@@ -85,32 +92,53 @@ export async function rmlMapper(
             for (let source of sources) {
                 console.log("[rmlMapper processor]", "Handling source", source.location);
                 // Process raw data input streams
-                const handleSourceData = async (data: string) => {
+                const handleSourceData = async (update: SourceDataUpdate) => {
+                    const { source, data } = update;
                     console.log("[rmlMapper processor]", "Got data for", source.location);
-                    source.hasData = true;
-                    await writeFile(source.newLocation, data);
 
-                    if (sources.every((x) => x.hasData)) {
-                        // We made sure that all declared logical sources are present
-                        console.log("[rmlMapper processor]", "Start mapping now");
-                        await executeMappings(
-                            mappingLocations,
-                            jarFile,
-                            outputFile,
-                            sources,
-                            targets,
-                            defaultWriter
-                        );
+                    if (executing) {
+                        // We are already running a mapping process. 
+                        // Store this date update and process when it is finished.
+                        console.log("[rmlMapper processor]", "Buffering input until previous mapping is finished");
+                        sourceBuffer.push({ source, data });
                     } else {
-                        console.error("[rmlMapper processor]", "Cannot start mapping, not all data has been received");
+                        source.hasData = true;
+                        await writeFile(source.newLocation, data);
+
+                        if (sources.every((x) => x.hasData)) {
+                            // We made sure that all declared logical sources are present
+                            console.log("[rmlMapper processor]", "Start mapping now");
+                            // Flag that mapping process is ongoing
+                            executing = true;
+                            await executeMappings(
+                                mappingLocations,
+                                jarFile,
+                                outputFile,
+                                sources,
+                                targets,
+                                defaultWriter
+                            );
+                            // Flag that mapping process is over
+                            executing = false;
+                            // Process buffered input updates
+                            while (sourceBuffer.length > 0) {
+                                const update = sourceBuffer.shift();
+                                if (update) {
+                                    console.log("[rmlMapper processor]", "Processing buffered input", update.source.location);
+                                    await handleSourceData(update);
+                                }
+                            }
+                        } else {
+                            console.warn("[rmlMapper processor]", "Cannot start mapping, not all data has been received");
+                        }
                     }
                 };
 
                 // Register data event handler
-                source.dataInput.data(data => handleSourceData(data));
+                source.dataInput.data(async (data) => await handleSourceData({ source, data }));
                 // Process data that has already been pushed to the input stream
                 if (source.dataInput.lastElement) {
-                    await handleSourceData(source.dataInput.lastElement);
+                    await handleSourceData({ source, data: source.dataInput.lastElement });
                 }
             }
         } else {
@@ -155,7 +183,7 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
             for (let target of targets) {
                 if (target.location === foundTarget.target.value) {
                     console.log(
-                        "[rmlMapper processor]", 
+                        "[rmlMapper processor]",
                         "Moving location",
                         foundTarget.target.value,
                         "to",
@@ -180,7 +208,7 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
             }
             if (!found) {
                 console.warn(
-                    "[rmlMapper processor]", 
+                    "[rmlMapper processor]",
                     `Logical Target ${foundTarget.subject.value} has no Connector Architecture declaration`
                 );
             }
@@ -239,7 +267,7 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
             }
             if (!found) {
                 console.warn(
-                    "[rmlMapper processor]", 
+                    "[rmlMapper processor]",
                     `Logical Source ${foundSource.subject.value} has no Connector Architecture declaration`
                 );
             }
@@ -283,6 +311,10 @@ async function executeMappings(
 
         out += await readFile(outputFile, { encoding: "utf8" });
 
+        // TODO: 
+        // Not all produced triples should go to all declared logical targets.
+        // Logical targets are defined per SubjectMap, 
+        // therefore we need to pair them up accordingly.
         if (targets) {
             for (let target of targets) {
                 const file = await readFile(target.newLocation, { encoding: "utf8" });

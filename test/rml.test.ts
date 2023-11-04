@@ -175,6 +175,13 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         </resource>
     `;
 
+    const LOCAL_RAW_DATA_UPDATE = `
+        <resource>
+            <data id="001" label="some new data"></data>
+            <data id="002" label="some other new data"></data>
+        </resource>
+    `;
+
     test("Mapping process with declared logical source and target", async () => {
         const rmlDoc = `
             ${PREFIXES}
@@ -357,7 +364,66 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         await mappingReader.push(rmlDoc);
         await mappingReader.end();
     });
+
+    test("Mapping process with async input updates", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET}
+        `;
+        // Define function parameters
+        const mappingReader = new SimpleStream<string>();
+        const sourceInputStream = new SimpleStream<string>();
+        const outputStream = new SimpleStream<string>();
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                newLocation: "",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: true
+            }
+        ];
+
+        // Check output
+        let first = true;
+        outputStream.data((data: string) => {
+            const store = new Store();
+            store.addQuads(new Parser().parse(data));
+
+            expect(store.getQuads(null, null, null, null).length).toBe(4);
+
+            if (first) {
+                first = false;
+                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                    .object.value).toBe("some data");
+                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                    .object.value).toBe("some other data");
+            } else {
+                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                    .object.value).toBe("some new data");
+                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                    .object.value).toBe("some other new data");
+            }
+        });
+
+        // Execute function
+        await rmlMapper(mappingReader, sources, undefined, outputStream, "/tmp/rmlMapper.jar");
+
+        // Push mappings input data
+        await mappingReader.push(rmlDoc);
+        await mappingReader.end();
+
+        // Asynchronously push data updates
+        sourceInputStream.push(LOCAL_RAW_DATA);
+        await sleep(1000);
+        await sourceInputStream.push(LOCAL_RAW_DATA_UPDATE);
+        await sleep(3000);
+    });
 });
+
+function sleep(x: number): Promise<unknown> {
+    return new Promise(resolve => setTimeout(resolve, x));
+}
 
 afterAll(async () => {
     // Clean up temporal files
