@@ -1,9 +1,10 @@
 import { describe, expect, test } from "@jest/globals";
 import { extractProcessors, extractSteps, Source } from "@ajuvercr/js-runner";
 import { resolve } from "path";
+import { IDLAB_FN, AS, DC } from "../src/voc";
 
 describe("Tests for RML-related processors", async () => {
-    const pipeline = `
+    const PIPELINE = `
         @prefix js: <https://w3id.org/conn/js#>.
         @prefix ws: <https://w3id.org/conn/ws#>.
         @prefix : <https://w3id.org/conn#>.
@@ -30,7 +31,7 @@ describe("Tests for RML-related processors", async () => {
             js:output <jw>.`;
 
         const source: Source = {
-            value: pipeline + proc,
+            value: PIPELINE + proc,
             baseIRI,
             type: "memory",
         };
@@ -69,7 +70,7 @@ describe("Tests for RML-related processors", async () => {
         `;
 
         const source: Source = {
-            value: pipeline + proc,
+            value: PIPELINE + proc,
             baseIRI,
             type: "memory",
         };
@@ -84,17 +85,94 @@ describe("Tests for RML-related processors", async () => {
         expect(argss[0].length).toBe(5);
 
         const [[mappings, rmlSource, rmlTarget, output, rmlJar]] = argss;
-        
+
         expect(rmlSource[0].location).toBe("dataset/data.xml");
         testReader(rmlSource[0].dataInput);
         expect(rmlSource[0].trigger).toBeTruthy();
-        
+
         expect(rmlTarget[0].location).toBe("dataset/output.nt");
         testWriter(rmlTarget[0].writer);
 
         testReader(mappings);
         testWriter(output);
         expect(rmlJar).toBe(resolve("./rmlmapper-6.3.0-r0-all.jar"));
+
+        await checkProc(env.file, env.func);
+    });
+
+    test("js:IncRMLTransformer is properly defined", async () => {
+        const proc = `
+            [ ] a js:IncRMLTransformer; 
+                js:rmlStream <jr>;
+                js:config [
+                    js:stateBasePath <./state>;
+                    js:lifeCycleConfig [
+                        js:predicate <http://ex.org/lifeCycleProp>;
+                        js:create [
+                            js:function <http://example.com/idlab/function/explicitCreate>;
+                            js:type <https://www.w3.org/ns/activitystreams#Create>
+                        ];
+                        js:update [
+                            js:function <http://example.com/idlab/function/implicitUpdate>;
+                            js:type <https://www.w3.org/ns/activitystreams#Update>
+                        ];
+                        js:delete [
+                            js:function <http://example.com/idlab/function/implicitDelete>;
+                            js:type <https://www.w3.org/ns/activitystreams#Delete>
+                        ]
+                    ];
+                    js:targetConfig [
+                        js:targetPath <./output>;
+                        js:timestampPath <http://purl.org/dc/terms/modified>;
+                        js:versionOfPath <http://purl.org/dc/terms/isVersionOf>;
+                        js:serialization <http://www.w3.org/ns/formats/N-Triples>;
+                        js:uniqueIRIs true;
+                        js:ldesBaseIRI <http://ex.org/my-ldes>;
+                        js:shape <http://ex.org/my-ldes/shape>
+                    ]
+                ];
+                js:incrmlStream <jw>;
+                js:bulkMode true.
+        `;
+
+        const source: Source = {
+            value: PIPELINE + proc,
+            baseIRI,
+            type: "memory",
+        };
+
+        const { processors, quads, shapes: config } = await extractProcessors(source);
+
+        const env = processors.find((x) => x.ty.value === "https://w3id.org/conn/js#IncRMLTransformer")!;
+        expect(env).toBeDefined();
+
+        const argss = extractSteps(env, quads, config);
+        expect(argss.length).toBe(1);
+        expect(argss[0].length).toBe(4);
+
+        const [[rmlStream, incrmlConfig, incrmlStream, bulkMode]] = argss;
+
+        testReader(rmlStream);
+
+        expect(incrmlConfig.stateBasePath).toBe(resolve("./state"));
+        expect(incrmlConfig.lifeCycleConfig.predicate.value).toBe("http://ex.org/lifeCycleProp");
+        expect(incrmlConfig.lifeCycleConfig.create.function.value).toBe(IDLAB_FN.explicitCreate);
+        expect(incrmlConfig.lifeCycleConfig.create.type.value).toBe(AS.Create);
+        expect(incrmlConfig.lifeCycleConfig.update.function.value).toBe(IDLAB_FN.implicitUpdate);
+        expect(incrmlConfig.lifeCycleConfig.update.type.value).toBe(AS.Update);
+        expect(incrmlConfig.lifeCycleConfig.delete.function.value).toBe(IDLAB_FN.implicitDelete);
+        expect(incrmlConfig.lifeCycleConfig.delete.type.value).toBe(AS.Delete);
+        expect(incrmlConfig.targetConfig.targetPath).toBe(resolve("./output"));
+        expect(incrmlConfig.targetConfig.timestampPath.value).toBe(DC.modified);
+        expect(incrmlConfig.targetConfig.versionOfPath.value).toBe(DC.custom("isVersionOf"));
+        expect(incrmlConfig.targetConfig.serialization.value).toBe("http://www.w3.org/ns/formats/N-Triples");
+        expect(incrmlConfig.targetConfig.uniqueIRIs).toBeTruthy();
+        expect(incrmlConfig.targetConfig.ldesBaseIRI.value).toBe("http://ex.org/my-ldes");
+        expect(incrmlConfig.targetConfig.shape.value).toBe("http://ex.org/my-ldes/shape");
+
+        testWriter(incrmlStream);
+
+        expect(bulkMode).toBeTruthy();
 
         await checkProc(env.file, env.func);
     });

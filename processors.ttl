@@ -17,12 +17,12 @@ js:Y2R a js:JsProcess;
     fno:parameterMapping [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "Data input channel";
-      fnom:implementationParameterPosition "0"^^xsd:int
+      fnom:implementationParameterPosition "0"^^xsd:int;
     ], [
       a fnom:PositionParameterMapping;
       fnom:functionParameter "Data output channel";
-      fnom:implementationParameterPosition "1"^^xsd:int
-    ]
+      fnom:implementationParameterPosition "1"^^xsd:int;
+    ];
   ].
 
 [ ] a sh:NodeShape;
@@ -32,13 +32,13 @@ js:Y2R a js:JsProcess;
     sh:path js:input;
     sh:maxCount 1;
     sh:minCount 1;
-    sh:name "Data input channel"
+    sh:name "Data input channel";
   ], [
     sh:class :WriterChannel;
     sh:path js:output;
     sh:maxCount 1;
     sh:minCount 1;
-    sh:name "Data output channel"
+    sh:name "Data output channel";
   ].
 
 js:RMLMapperReader a js:JsProcess;
@@ -114,28 +114,192 @@ js:RMLMapperReader a js:JsProcess;
     sh:name "mappingInput";
     sh:class :ReaderChannel;
     sh:minCount 1;
-    sh:maxCount 1
+    sh:maxCount 1;
   ], [
     sh:path js:rmlSource;
     sh:name "sources";
     sh:class js:RmlSource;
-    sh:minCount 0
+    sh:minCount 0;
   ], [
     sh:path js:rmlTarget;
     sh:name "targets";
     sh:class js:RmlTarget;
-    sh:minCount 0
+    sh:minCount 0;
   ], [
     sh:path js:output;
     sh:name "defaultWriter";
     sh:class :WriterChannel;
-    sh:minCount 1;
-    sh:maxCount 1
+    sh:minCount 0;
+    sh:maxCount 1;
   ], [
     sh:path js:rmlJar;
     sh:name "jarLocation";
     sh:datatype xsd:string;
     sh:minCount 0;
+    sh:maxCount 1;
+  ].
+
+js:IncRMLTransformer a js:JsProcess;
+  js:file <./lib/rml/incrml.js>;
+  js:function "rml2incrml";
+  js:location <./>;
+  js:mapping [
+    a fno:Mapping;
+    fno:parameterMapping [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "rmlStream";
+      fnom:implementationParameterPosition "0"^^xsd:integer;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "config";
+      fnom:implementationParameterPosition "1"^^xsd:integer;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "incrmlStream";
+      fnom:implementationParameterPosition "2"^^xsd:integer;
+    ], [
+      a fnom:PositionParameterMapping;
+      fnom:functionParameter "bulkMode";
+      fnom:implementationParameterPosition "3"^^xsd:integer;
+    ];
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass js:IncRMLTransformer;
+  sh:property [
+    sh:path js:rmlStream;
+    sh:name "rmlStream";
+    sh:class :ReaderChannel;
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:config;
+    sh:name "config";
+    sh:class js:IncRMLConfig;
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:incrmlStream;
+    sh:name "incrmlStream";
+    sh:class :WriterChannel;
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:bulkMode;
+    sh:name "bulkMode";
+    sh:datatype xsd:boolean;
+    sh:minCount 0;
     sh:maxCount 1
   ].
 
+[ ] a sh:NodeShape;
+  sh:targetClass js:IncRMLConfig;
+  sh:property [
+    sh:path js:stateBasePath;
+    sh:datatype xsd:string;
+    sh:name "stateBasePath";
+    sh:maxCount 1;
+    sh:minCount 1
+  ], [
+    sh:path js:lifeCycleConfig;
+    sh:class js:LifeCycleConfig;
+    sh:name "lifeCycleConfig";
+    sh:maxCount 1;
+    sh:minCount 1
+  ], [
+    sh:path js:targetConfig;
+    sh:class js:LDESTargetConfig;
+    sh:name "targetConfig";
+    sh:minCount 0;
+    sh:maxCount 1
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass js:LifeCycleConfig;
+  sh:property [
+    sh:path js:predicate;
+    sh:datatype xsd:iri;
+    sh:name "predicate";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:create;
+    sh:class js:EventConfig;
+    sh:name "create";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:update;
+    sh:class js:EventConfig;
+    sh:name "update";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:delete;
+    sh:class js:EventConfig;
+    sh:name "delete";
+    sh:minCount 1;
+    sh:maxCount 1
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass js:EventConfig;
+  sh:property [
+    sh:path js:function;
+    sh:datatype xsd:iri;
+    sh:name "function";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:type;
+    sh:datatype xsd:iri;
+    sh:name "type";
+    sh:minCount 1;
+    sh:maxCount 1
+  ].
+
+[ ] a sh:NodeShape;
+  sh:targetClass js:LDESTargetConfig;
+  sh:property [
+    sh:path js:targetPath;
+    sh:datatype xsd:string;
+    sh:name "targetPath";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:timestampPath;
+    sh:datatype xsd:iri;
+    sh:name "timestampPath";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:versionOfPath;
+    sh:datatype xsd:iri;
+    sh:name "versionOfPath";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:serialization;
+    sh:datatype xsd:iri;
+    sh:name "serialization";
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:uniqueIRIs;
+    sh:name "uniqueIRIs";
+    sh:datatype xsd:boolean;
+    sh:minCount 1;
+    sh:maxCount 1
+  ], [
+    sh:path js:ldesBaseIRI;
+    sh:datatype xsd:iri;
+    sh:name "ldesBaseIRI";
+    sh:minCount 0;
+    sh:maxCount 1
+  ], [
+    sh:path js:shape;
+    sh:datatype xsd:iri;
+    sh:name "shape";
+    sh:minCount 0;
+    sh:maxCount 1
+  ].

@@ -14,7 +14,7 @@ import { Quad_Object } from "@rdfjs/types";
 
 const { quad, namedNode, blankNode, literal } = DataFactory;
 
-export const BASE = "http://mapping.example.com/#";
+export const BASE = "http://ex.org/mapping/#";
 
 export type IncRMLConfig = {
     stateBasePath: string,
@@ -72,7 +72,7 @@ type TriplesMapsConfig = {
 export async function rml2incrml(
     rmlStream: Stream<string>,
     config: IncRMLConfig,
-    starmlStream: Writer<string>,
+    incrmlStream: Writer<string>,
     bulkMode?: boolean
 ) {
     let store = new Store();
@@ -85,7 +85,7 @@ export async function rml2incrml(
             // Proceed to expand the mappings and stream them out
             store.addQuads(rdfParser.parse(rml));
             expand2StateAware(store, config).forEach(async mapping => {
-                await starmlStream.push(new N3Writer().quadsToString(mapping.triplesMaps));
+                await incrmlStream.push(new N3Writer().quadsToString(mapping.triplesMaps));
             });
         } else {
             // Make sure IRIs are unique across mapping sources
@@ -110,7 +110,7 @@ export async function rml2incrml(
     }).on("end", async () => {
         if (bulkMode) {
             expand2StateAware(store, config).forEach(async mapping => {
-                await starmlStream.push(new N3Writer().quadsToString(mapping.triplesMaps));
+                await incrmlStream.push(new N3Writer().quadsToString(mapping.triplesMaps));
             });
         }
     });
