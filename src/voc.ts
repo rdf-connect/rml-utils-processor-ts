@@ -4,6 +4,7 @@ export * from "@treecg/types";
 
 export const VOID = createUriAndTermNamespace(
   "http://rdfs.org/ns/void#",
+  "Dataset",
   "dataDump",
 );
 export const RDF = createUriAndTermNamespace(
@@ -13,12 +14,13 @@ export const RDF = createUriAndTermNamespace(
 
 export const RML = createUriAndTermNamespace(
   "http://semweb.mmlab.be/ns/rml#",
+  "LogicalSource",
   "logicalSource",
+  "logicalTarget",
   "source",
   "referenceFormulation",
   "reference",
   "iterator",
-  "LogicalSource"
 );
 
 export const RMLS = createUriAndTermNamespace(
@@ -34,17 +36,31 @@ export const RMLS = createUriAndTermNamespace(
 export const RMLT = createUriAndTermNamespace(
   "http://semweb.mmlab.be/ns/rml-target#",
   "LogicalTarget",
+  "EventStreamTarget",
+  "ldes",
+  "ldesBaseIRI",
   "serialization",
   "target",
+  "ldesGenerateImmutableIRI"
 );
 
 export const RR = createUriAndTermNamespace(
   "http://www.w3.org/ns/r2rml#",
+  "FunctionTermMap",
   "TriplesMap",
   "SubjectMap",
   "PredicateObjectMap",
   "GraphMap",
+  "class",
   "constant",
+  "dataType",
+  "objectMap",
+  "predicate",
+  "predicateObjectMap",
+  "predicateMap",
+  "subjectMap",
+  "graphMap",
+  "template",
   "termType",
   "IRI",
 );
@@ -53,6 +69,11 @@ export const FNML = createUriAndTermNamespace(
   "http://semweb.mmlab.be/ns/fnml#",
   "FunctionTermMap",
   "functionValue",
+);
+
+export const FNO = createUriAndTermNamespace(
+  "https://w3id.org/function/ontology#",
+  "executes"
 );
 
 export const QL = createUriAndTermNamespace(
@@ -69,4 +90,30 @@ export const CSVW = createUriAndTermNamespace(
   "Dialect",
   "delimiter",
   "Table",
+);
+
+export const GREL = createUriAndTermNamespace(
+  "http://users.ugent.be/~bjdmeest/function/grel.ttl#",
+  "valueParameter",
+  "valueParameter2"
+);
+
+export const IDLAB_FN = createUriAndTermNamespace(
+  "http://example.com/idlab/function/",
+  "iri",
+  "explicitCreate",
+  "implicitUpdate",
+  "implicitDelete",
+  "trueCondition",
+  "strBoolean",
+  "state",
+  "str",
+  "watchedProperty"
+);
+
+export const AS = createUriAndTermNamespace(
+  "https://www.w3.org/ns/activitystreams#",
+  "Create",
+  "Update",
+  "Delete"
 );
