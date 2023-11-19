@@ -2,7 +2,7 @@
 
 [![Bun CI](https://github.com/julianrojas87/rml-mapper-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/julianrojas87/rml-mapper-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/rml-mapper-processor-ts.svg?style=popout)](https://npmjs.com/package/rml-mapper-processor-ts)
 
-Typescript wrappers over the RML-related operations to be reused within the [Connector Architecture](https://github.com/TREEcg/connector-architecture). Currently this repository exposes 2 functions:
+Typescript wrappers over the RML-related operations to be reused within the [Connector Architecture](hhttps://the-connector-architecture.github.io/site/docs/1_Home). Currently this repository exposes 2 functions:
 
 ### [`js:Y2R`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L9)
 

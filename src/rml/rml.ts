@@ -297,6 +297,7 @@ async function executeMappings(
 
     let out = "";
     for (let mappingFile of mappingLocations) {
+        const t0 = new Date();
         console.log("[rmlMapper processor]", "Running", mappingFile);
         const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
 
@@ -321,7 +322,7 @@ async function executeMappings(
                 await target.writer.push(file);
             }
         }
-        console.log("[rmlMapper processor]", "Done", mappingFile);
+        console.log("[rmlMapper processor]", "Done", mappingFile, `in ${new Date().getTime() - t0.getTime()} ms`);
     }
 
     console.log("[rmlMapper processor]", "All done");
