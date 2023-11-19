@@ -41,7 +41,7 @@ type LDESTargetConfig = {
 
 type MappingGroup = {
     subjectTemplate: string,
-    triplesMaps: Quad[]
+    triplesMaps: Store
 };
 
 type TriplesMapsPerGraphMap = {
@@ -85,7 +85,10 @@ export async function rml2incrml(
             // Proceed to expand the mappings and stream them out
             store.addQuads(rdfParser.parse(rml));
             expand2StateAware(store, config).forEach(async mapping => {
-                await incrmlStream.push(new N3Writer().quadsToString(mapping.triplesMaps));
+                console.log(`[rml2incrml processor] Transformed RML mappings for IRI template defined by "${mapping.subjectTemplate}"`);
+                await incrmlStream.push(new N3Writer().quadsToString(
+                    mapping.triplesMaps.getQuads(null, null, null, null)
+                ));
             });
         } else {
             // Make sure IRIs are unique across mapping sources
@@ -110,8 +113,13 @@ export async function rml2incrml(
     }).on("end", async () => {
         if (bulkMode) {
             expand2StateAware(store, config).forEach(async mapping => {
-                await incrmlStream.push(new N3Writer().quadsToString(mapping.triplesMaps));
+                console.log(`[rml2incrml processor] Transformed RML mappings for IRI template defined by "${mapping.subjectTemplate}"`);
+                await incrmlStream.push(new N3Writer().quadsToString(
+                    mapping.triplesMaps.getQuads(null, null, null, null)
+                ));
             });
+
+            await incrmlStream.end();
         }
     });
 }
@@ -137,11 +145,14 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
     const triplesMapsPerTemplate = extractTriplesMapsPerTemplate(rmlStore);
     // Incremental sequence used to guarantee unique IRIs
     let counter = 0;
+    // Resulting array of "mapping files"
+    const result: MappingGroup[] = [];
 
     // Iterate over sets of rr:TripleMaps and expand them into a state-aware version (Create, Update and Delete).
     // We create a single TriplesMap per event, that merges all TMs associated 
     // with the same IRI template, Logical Source and Named Graph (if any)
     for (const template of triplesMapsPerTemplate.keys()) {
+        const fileStore: Store = new Store();
         const templateObj: GraphMapsPerSource = triplesMapsPerTemplate.get(template)!;
 
         for (const logSrc of Object.keys(templateObj)) {
@@ -152,7 +163,7 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
                     const graphMapObj = <TriplesMapsPerGraphMap>logSrcObj[graphMap]!;
 
                     ["create", "update", "delete"].forEach(event => {
-                        rmlStore.addQuads(generateTriplesMapQuads(
+                        fileStore.addQuads(generateTriplesMapQuads(
                             {
                                 eventType: <EntityEvent>event,
                                 template,
@@ -170,29 +181,20 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
                         ));
                     });
 
-                    // Delete unnecessary triples
-                    graphMapObj.triplesMaps.forEach(tm => {
-                        // Delete all quads of orphan Subject Map
-                        const smQ = rmlStore.getQuads(tm, RR.subjectMap, null, null)[0];
-                        if (smQ) {
-                            rmlStore.removeQuads(rmlStore.getQuads(smQ.object, null, null, null));
-                        }
-                        // Delete all triples of the original Triples Map
-                        rmlStore.removeQuads(rmlStore.getQuads(tm, null, null, null));
-                        rmlStore.removeQuads(rmlStore.getQuads(null, null, tm, null));
-                    });
-
-
                     counter++;
                 }
             }
         }
+
+        // Add missing referenced quads from original mappings
+        fileStore.addQuads(complementQuads(fileStore, rmlStore));
+        result.push({
+            subjectTemplate: template,
+            triplesMaps: fileStore
+        });
     }
 
-    return [{
-        subjectTemplate: "",
-        triplesMaps: rmlStore.getQuads(null, null, null, null)
-    }];
+    return result;
 }
 
 function extractTriplesMapsPerTemplate(store: Store): Map<string, GraphMapsPerSource> {
@@ -570,4 +572,38 @@ function findPropertyRecursively(fv: Quad_Object, store: Store): Array<string> |
     }
 
     return null;
+}
+
+function complementQuads(newQuads: Store, originalQuads: Store): Quad[] {
+    const missingQuads: Quad[] = [];
+    const objects = newQuads.getObjects(null, null, null);
+    const subjects = newQuads.getSubjects(null, null, null);
+
+    // Extract all quads of missing referenced objects
+    for (let i = 0; i < objects.length; i++) {
+        const obj = objects[i];
+        if (obj instanceof NamedNode || obj instanceof BlankNode) {
+            if (newQuads.getQuads(obj, null, null, null).length === 0) {
+                const mqs = originalQuads.getQuads(obj, null, null, null);
+                mqs.forEach(q => {
+                    objects.push(q.object);
+                });
+                missingQuads.push(...mqs);
+            }
+        }
+    }
+
+    // Extract all quads of missing referenced subjects
+    for (let i = 0; i < subjects.length; i++) {
+        const sub = subjects[i];
+        if (newQuads.getQuads(null, null, sub, null).length === 0) {
+            const mqs = originalQuads.getQuads(null, null, sub, null);
+            mqs.forEach(q => {
+                subjects.push(q.subject);
+            })
+            missingQuads.push(...mqs);
+        }
+    }
+
+    return missingQuads;
 }

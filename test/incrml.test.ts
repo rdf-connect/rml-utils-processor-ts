@@ -118,6 +118,49 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         `;
     };
 
+    const POM_JOIN = (predicate, parentTM) => {
+        return `
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicateMap [
+                    a rr:PredicateMap ;
+                    rr:constant <${predicate}>
+                ] ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rr:parentTriplesMap <${parentTM}> ;
+                    rml:joinCondition [
+                        a fnml:FunctionTermMap ;
+                        fnml:functionValue [
+                            rr:predicateObjectMap [
+                                rr:predicate fno:executes ;
+                                rr:objectMap [
+                                    rr:constant idlab-fn:equal ;
+                                    rr:termType rr:IRI
+                                ]
+                            ] ;
+                            rr:predicateObjectMap [
+                                rr:predicate grel:valueParameter ;
+                                rr:objectMap [
+                                    rml:reference "Property/@Value" ;
+                                    rr:termType rr:Literal
+                                ]
+                            ] ;
+                            rr:predicateObjectMap [
+                                rr:predicate grel:valueParameter2 ;
+                                rr:objectMap [
+                                    rr:parentTermMap [
+                                        rml:reference "Property1/@Value"
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        `;
+    };
+
     test("1 RML mapping with 1 Triples Map without explicit target", async () => {
         const rmlStream = new SimpleStream<string>();
         const incrmlStream = new SimpleStream<string>();
@@ -161,6 +204,56 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             ${TM(0, "dataset/data.xml", "http://ex.org/instances/{Property/@Value}", "<http://ex.org/myGraph>")};
             ${POM("http://ex.org/ns/type", { pred: "rr:template", obj: "\"http://ex.org/instance/{AnotherProperty/@Value}\"" })};
             ${POM("http://ex.org/ns/someProperty", { pred: "rr:constant", obj: "\"Some Value\"" })}.
+        `;
+        await rmlStream.push(mapping);
+    });
+
+    test("1 RML mapping with 2 Triples Map doing a join and without explicit target", async () => {
+        const rmlStream = new SimpleStream<string>();
+        const incrmlStream = new SimpleStream<string>();
+        const config: IncRMLConfig = {
+            stateBasePath: ".",
+            lifeCycleConfig: {
+                predicate: "http://ex.org/ns/lifeCycleProperty",
+                create: { function: IDLAB_FN.explicitCreate, type: AS.Create },
+                update: { function: IDLAB_FN.implicitUpdate, type: AS.Update },
+                delete: { function: IDLAB_FN.implicitDelete, type: AS.Delete }
+            }
+        };
+
+        incrmlStream.data(data => {
+            const store = new Store();
+            store.addQuads(new Parser().parse(data));
+
+            // Check there are 4 Triples Maps (including the join TM)
+            expect(store.getQuads(null, RDF.type, RR.TriplesMap, null).length).toBe(4);
+
+            // Check there are Object Maps pointing to lifecycle entities
+            expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(3);
+            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null)[0]).toBeDefined();
+            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null)[0]).toBeDefined();
+            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null)[0]).toBeDefined();
+
+            // Check that the watched properties template is properly defined
+            expect(store.getQuads(
+                null,
+                RML.reference,
+                DataFactory.literal("prop0=AnotherProperty/@Value"),
+                null
+            )[0]).toBeDefined();
+        });
+
+        await rml2incrml(rmlStream, config, incrmlStream);
+
+        // Push a mapping
+        const mapping = `
+            ${PREFIXES}
+            ${TM(0, "dataset/data.xml", "http://ex.org/instances/{Property/@Value}", "<http://ex.org/myGraph>")};
+            ${POM("http://ex.org/ns/type", { pred: "rr:template", obj: "\"http://ex.org/instance/{AnotherProperty/@Value}\"" })};
+            ${POM("http://ex.org/ns/someProperty", { pred: "rr:constant", obj: "\"Some Value\"" })};
+            ${POM_JOIN("http://ex.org/ns/joinProperty", "http://ex.org/m1")}.
+
+            ${TM(1, "dataset/data2.xml", "http://ex.org/instances/{Property1/@Value}")}.
         `;
         await rmlStream.push(mapping);
     });
@@ -326,31 +419,36 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             }
         };
 
+        const store = new Store();
+        let count = 0;
         incrmlStream.data(data => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+            // There should be 3 new mapping files produced from the 3 different IRI templates
+            if (count < 3) {
+                store.addQuads(new Parser().parse(data));
+                count++;
+            } else {
+                // Check there are 9 Triples Maps
+                const tms = store.getQuads(null, RDF.type, RR.TriplesMap, null);
+                expect(tms.length).toBe(9);
 
-            // Check there are 9 Triples Maps
-            const tms = store.getQuads(null, RDF.type, RR.TriplesMap, null);
-            expect(tms.length).toBe(9);
+                // Check there are Object Maps pointing to lifecycle entities
+                expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(9);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(3);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(3);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(3);
 
-            // Check there are Object Maps pointing to lifecycle entities
-            expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(9);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(3);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(3);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(3);
+                // Check that states are different for all Triples Maps
+                const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
+                const states: string[] = [];
+                statePOMs.forEach(pom => {
+                    const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
+                    states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
+                });
+                expect(new Set(states).size).toBe(states.length);
 
-            // Check that states are different for all Triples Maps
-            const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
-            const states: string[] = [];
-            statePOMs.forEach(pom => {
-                const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
-                states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
-            });
-            expect(new Set(states).size).toBe(states.length);
-
-            // Check that the watched properties templates are properly defined
-            expect(store.getQuads(null, RML.reference, DataFactory.literal(""), null).length).toBe(3);
+                // Check that the watched properties templates are properly defined
+                expect(store.getQuads(null, RML.reference, DataFactory.literal(""), null).length).toBe(3);
+            }
         });
 
         await rml2incrml(rmlStream, config, incrmlStream);
@@ -468,70 +566,75 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             }
         };
 
+        const store = new Store();
+        let count = 0;
         incrmlStream.data(data => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+            // There should be 2 new mapping files produced from the 2 different IRI templates
+            if (count < 2) {
+                store.addQuads(new Parser().parse(data));
+                count++;
+            } else {
+                // Check there are 6 Triples Maps
+                const tms = store.getSubjects(RDF.type, RR.TriplesMap, null);
+                expect(tms.length).toBe(6);
 
-            // Check there are 6 Triples Maps
-            const tms = store.getSubjects(RDF.type, RR.TriplesMap, null);
-            expect(tms.length).toBe(6);
+                // Check there are Object Maps pointing to lifecycle entities
+                expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(6);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(2);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(2);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(2);
 
-            // Check there are Object Maps pointing to lifecycle entities
-            expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(6);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(2);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(2);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(2);
-
-            // Check that states are different for all Triples Maps
-            const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
-            const states: string[] = [];
-            statePOMs.forEach(pom => {
-                const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
-                states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
-            });
-            expect(new Set(states).size).toBe(states.length);
-
-            // Check that the watched properties templates are properly defined
-            expect(store.getQuads(
-                null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
-                null
-            )[0]).toBeDefined();
-            expect(store.getQuads(
-                null,
-                RML.reference,
-                DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
-                null
-            )[0]).toBeDefined();
-
-            // Check that conditional function is embedded correctly on stateful mappings
-            tms.forEach(tm => {
-                const sm = store.getObjects(tm, RR.subjectMap, null)[0];
-                const fv = store.getObjects(sm, FNML.functionValue, null)[0];
-                const poms = store.getObjects(fv, RR.predicateObjectMap, null);
-                expect(poms.length).toBeGreaterThanOrEqual(3);
-                // Check the IRI template param is the result of an embedded function
-                const iriPom = poms.find(pom => {
-                    const iriPm = store.getObjects(pom, RR.predicate, null)[0];
-                    return iriPm.value === IDLAB_FN.iri;
+                // Check that states are different for all Triples Maps
+                const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
+                const states: string[] = [];
+                statePOMs.forEach(pom => {
+                    const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
+                    states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
                 });
-                if (iriPom) {
-                    const iriOm = store.getObjects(iriPom, RR.objectMap, null)[0];
-                    const iriFnTm = store.getObjects(iriOm, FNML.functionValue, null)[0];
-                    if (iriFnTm) {
-                        const iriFnPoms = store.getObjects(iriFnTm, RR.predicateObjectMap, null);
-                        expect(iriFnPoms.some(pom => {
-                            const exec = store.getObjects(pom, RR.predicate, null)[0].value
-                            const fnObj = store.getObjects(pom, RR.objectMap, null)[0];
-                            const fn = store.getObjects(fnObj, RR.constant, null)[0];
-                            if (fn) {
-                                return exec === FNO.executes && fn.value === IDLAB_FN.trueCondition;
-                            }
-                        })).toBeTruthy();
+                expect(new Set(states).size).toBe(states.length);
+
+                // Check that the watched properties templates are properly defined
+                expect(store.getQuads(
+                    null,
+                    RML.reference,
+                    DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
+                    null
+                )[0]).toBeDefined();
+                expect(store.getQuads(
+                    null,
+                    RML.reference,
+                    DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
+                    null
+                )[0]).toBeDefined();
+
+                // Check that conditional function is embedded correctly on stateful mappings
+                tms.forEach(tm => {
+                    const sm = store.getObjects(tm, RR.subjectMap, null)[0];
+                    const fv = store.getObjects(sm, FNML.functionValue, null)[0];
+                    const poms = store.getObjects(fv, RR.predicateObjectMap, null);
+                    expect(poms.length).toBeGreaterThanOrEqual(3);
+                    // Check the IRI template param is the result of an embedded function
+                    const iriPom = poms.find(pom => {
+                        const iriPm = store.getObjects(pom, RR.predicate, null)[0];
+                        return iriPm.value === IDLAB_FN.iri;
+                    });
+                    if (iriPom) {
+                        const iriOm = store.getObjects(iriPom, RR.objectMap, null)[0];
+                        const iriFnTm = store.getObjects(iriOm, FNML.functionValue, null)[0];
+                        if (iriFnTm) {
+                            const iriFnPoms = store.getObjects(iriFnTm, RR.predicateObjectMap, null);
+                            expect(iriFnPoms.some(pom => {
+                                const exec = store.getObjects(pom, RR.predicate, null)[0].value
+                                const fnObj = store.getObjects(pom, RR.objectMap, null)[0];
+                                const fn = store.getObjects(fnObj, RR.constant, null)[0];
+                                if (fn) {
+                                    return exec === FNO.executes && fn.value === IDLAB_FN.trueCondition;
+                                }
+                            })).toBeTruthy();
+                        }
                     }
-                }
-            });
+                });
+            }
         });
 
         await rml2incrml(rmlStream, config, incrmlStream);
@@ -570,77 +673,82 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             }
         };
 
+        const store = new Store();
+        let count = 0;
         incrmlStream.data(data => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+            // There should be 2 new mapping files produced from the 2 different IRI templates
+            if (count < 2) {
+                store.addQuads(new Parser().parse(data));
+                count++;
+            } else {
+                // Check that Logical Target triples are defined
+                expect(store.getQuads(`${BASE}LDES_LT`, null, null, null).length).toBe(5);
 
-            // Check that Logical Target triples are defined
-            expect(store.getQuads(`${BASE}LDES_LT`, null, null, null).length).toBe(5);
+                // Check there are 6 Triples Maps
+                const tms = store.getSubjects(RDF.type, RR.TriplesMap, null);
+                expect(tms.length).toBe(6);
 
-            // Check there are 6 Triples Maps
-            const tms = store.getSubjects(RDF.type, RR.TriplesMap, null);
-            expect(tms.length).toBe(6);
-
-            // Check that each associated Subject Map is linked to the proper Logical Target
-            tms.forEach(tm => {
-                const smQ = store.getQuads(tm, RR.subjectMap, null, null)[0];
-                expect(store.getQuads(smQ.object, RML.logicalTarget, `${BASE}LDES_LT`, null)[0]).toBeDefined();
-            });
-
-            // Check there are Object Maps pointing to lifecycle entities
-            expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(6);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(2);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(2);
-            expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(2);
-
-            // Check that states are different for all Triples Maps
-            const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
-            const states: string[] = [];
-            statePOMs.forEach(pom => {
-                const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
-                states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
-            });
-            expect(new Set(states).size).toBe(states.length);
-
-            // Check that the watched properties templates are properly defined
-            expect(store.getQuads(
-                null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
-                null
-            )[0]).toBeDefined();
-            expect(store.getQuads(
-                null,
-                RML.reference,
-                DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
-                null
-            )[0]).toBeDefined();
-
-            // Check that conditional function is embedded correctly on stateful mappings
-            tms.forEach(tm => {
-                const sm = store.getObjects(tm, RR.subjectMap, null)[0];
-                const fv = store.getObjects(sm, FNML.functionValue, null)[0];
-                const poms = store.getObjects(fv, RR.predicateObjectMap, null);
-                expect(poms.length).toBeGreaterThanOrEqual(3);
-                // Check the IRI template param is the result of an embedded function
-                const iriPom = poms.find(pom => {
-                    const iriPm = store.getObjects(pom, RR.predicate, null)[0];
-                    return iriPm.value === IDLAB_FN.iri;
+                // Check that each associated Subject Map is linked to the proper Logical Target
+                tms.forEach(tm => {
+                    const smQ = store.getQuads(tm, RR.subjectMap, null, null)[0];
+                    expect(store.getQuads(smQ.object, RML.logicalTarget, `${BASE}LDES_LT`, null)[0]).toBeDefined();
                 });
-                if (iriPom) {
-                    const iriOm = store.getObjects(iriPom, RR.objectMap, null)[0];
-                    const iriFnTm = store.getObjects(iriOm, FNML.functionValue, null)[0];
-                    const iriFnPoms = store.getObjects(iriFnTm, RR.predicateObjectMap, null);
-                    expect(iriFnPoms.some(pom => {
-                        const exec = store.getObjects(pom, RR.predicate, null)[0].value
-                        const fnObj = store.getObjects(pom, RR.objectMap, null)[0];
-                        const fn = store.getObjects(fnObj, RR.constant, null)[0];
-                        if (fn) {
-                            return exec === FNO.executes && fn.value === IDLAB_FN.trueCondition;
-                        }
-                    })).toBeTruthy();
-                }
-            });
+
+                // Check there are Object Maps pointing to lifecycle entities
+                expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(6);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(2);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(2);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(2);
+
+                // Check that states are different for all Triples Maps
+                const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
+                const states: string[] = [];
+                statePOMs.forEach(pom => {
+                    const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
+                    states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
+                });
+                expect(new Set(states).size).toBe(states.length);
+
+                // Check that the watched properties templates are properly defined
+                expect(store.getQuads(
+                    null,
+                    RML.reference,
+                    DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
+                    null
+                )[0]).toBeDefined();
+                expect(store.getQuads(
+                    null,
+                    RML.reference,
+                    DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
+                    null
+                )[0]).toBeDefined();
+
+                // Check that conditional function is embedded correctly on stateful mappings
+                tms.forEach(tm => {
+                    const sm = store.getObjects(tm, RR.subjectMap, null)[0];
+                    const fv = store.getObjects(sm, FNML.functionValue, null)[0];
+                    const poms = store.getObjects(fv, RR.predicateObjectMap, null);
+                    expect(poms.length).toBeGreaterThanOrEqual(3);
+                    // Check the IRI template param is the result of an embedded function
+                    const iriPom = poms.find(pom => {
+                        const iriPm = store.getObjects(pom, RR.predicate, null)[0];
+                        return iriPm.value === IDLAB_FN.iri;
+                    });
+                    if (iriPom) {
+                        const iriOm = store.getObjects(iriPom, RR.objectMap, null)[0];
+                        const iriFnTm = store.getObjects(iriOm, FNML.functionValue, null)[0];
+                        const iriFnPoms = store.getObjects(iriFnTm, RR.predicateObjectMap, null);
+                        expect(iriFnPoms.some(pom => {
+                            const exec = store.getObjects(pom, RR.predicate, null)[0].value
+                            const fnObj = store.getObjects(pom, RR.objectMap, null)[0];
+                            const fn = store.getObjects(fnObj, RR.constant, null)[0];
+                            if (fn) {
+                                return exec === FNO.executes && fn.value === IDLAB_FN.trueCondition;
+                            }
+                        })).toBeTruthy();
+                    }
+                });
+            }
         });
 
         await rml2incrml(rmlStream, config, incrmlStream);
@@ -672,10 +780,10 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             }
         };
 
+        const store = new Store();
         incrmlStream.data(data => {
-            const store = new Store();
             store.addQuads(new Parser().parse(data));
-
+        }).on("end", () => {
             // Check there are 6 Triples Maps
             expect(store.getQuads(null, RDF.type, RR.TriplesMap, null).length).toBe(6);
 
@@ -699,6 +807,7 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 null
             )[0]).toBeDefined();
         });
+
 
         await rml2incrml(rmlStream, config, incrmlStream, true);
 
@@ -745,10 +854,10 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             }
         };
 
+        const store = new Store();
         incrmlStream.data(data => {
-            const store = new Store();
             store.addQuads(new Parser().parse(data));
-
+        }).on("end", () => {
             // Check that Logical Target triples are defined
             expect(store.getQuads(`${BASE}LDES_LT`, null, null, null).length).toBe(5);
 
@@ -892,4 +1001,6 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         ]);
         await rmlStream.end();
     });
+
+    // TODO test a POM join
 });
