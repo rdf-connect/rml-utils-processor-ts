@@ -360,6 +360,7 @@ function generateTriplesMapQuads(
                 literal(ldesTargetConfig.uniqueIRIs.toString(), namedNode(XSD.custom("boolean")))
             ),
             quad(LDES_LT, RMLT.terms.ldes, LDES_TARGET),
+            quad(LDES_TARGET, RDF.terms.type, LDES.terms.EventStream),
             quad(FTM, RML.terms.logicalTarget, LDES_LT)
         ]);
         // Optional rmlt:ldesBaseIRI
@@ -501,14 +502,14 @@ function generateTriplesMapQuads(
 
         let c = 0;
         propExpressions.forEach(prop => {
-            wpTemplate.push(`prop${c}=${prop}`);
+            wpTemplate.push(`prop${c}={${prop}}`);
             c++;
         });
         newTMQuads.push(...[
             quad(FV, RR.terms.predicateObjectMap, WATCHED_POM),
             quad(WATCHED_POM, RR.terms.predicate, IDLAB_FN.terms.watchedProperty),
             quad(WATCHED_POM, RR.terms.objectMap, WATCHED_OM),
-            quad(WATCHED_OM, RML.terms.reference, literal(wpTemplate.join("&")))
+            quad(WATCHED_OM, RR.terms.template, literal(wpTemplate.join("&")))
         ]);
     }
 

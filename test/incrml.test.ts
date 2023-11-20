@@ -47,7 +47,7 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             <http://ex.org/m${i}> a rr:TriplesMap ;
                 rml:logicalSource <http://ex.org/ls0> ;
                 rr:subjectMap [
-                    a fnml:FunctionTermMap ;
+                    a rr:FunctionTermMap ;
                     fnml:functionValue [
                         rml:logicalSource <http://ex.org/ls0> ;
                         rr:predicateObjectMap [
@@ -190,8 +190,8 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties template is properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty/@Value}"),
                 null
             )[0]).toBeDefined();
         });
@@ -237,8 +237,8 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties template is properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty/@Value}"),
                 null
             )[0]).toBeDefined();
         });
@@ -304,8 +304,8 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties template is properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value&prop1=YetAnotherProperty/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={YetAnotherProperty/@Value}"),
                 null
             )[0]).toBeDefined();
         });
@@ -379,14 +379,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty/@Value}"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
+                RR.template,
+                DataFactory.literal("prop0={YetAnotherProperty/@Value}&prop1={@Name}"),
                 null
             )[0]).toBeDefined();
         });
@@ -447,7 +447,7 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 expect(new Set(states).size).toBe(states.length);
 
                 // Check that the watched properties templates are properly defined
-                expect(store.getQuads(null, RML.reference, DataFactory.literal(""), null).length).toBe(3);
+                expect(store.getQuads(null, RR.template, DataFactory.literal(""), null).length).toBe(3);
             }
         });
 
@@ -525,14 +525,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={SomeProperty/@Name}"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty/@Value&prop1=@Name"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={@Name}"),
                 null
             )[0]).toBeDefined();
         });
@@ -596,14 +596,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 // Check that the watched properties templates are properly defined
                 expect(store.getQuads(
                     null,
-                    RML.reference,
-                    DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
+                    RR.template,
+                    DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={SomeProperty/@Name}"),
                     null
                 )[0]).toBeDefined();
                 expect(store.getQuads(
                     null,
-                    RML.reference,
-                    DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
+                    RR.template,
+                    DataFactory.literal("prop0={YetAnotherProperty/@Value}&prop1={@Name}"),
                     null
                 )[0]).toBeDefined();
 
@@ -712,14 +712,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 // Check that the watched properties templates are properly defined
                 expect(store.getQuads(
                     null,
-                    RML.reference,
-                    DataFactory.literal("prop0=AnotherProperty/@Value&prop1=SomeProperty/@Name"),
+                    RR.template,
+                    DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={SomeProperty/@Name}"),
                     null
                 )[0]).toBeDefined();
                 expect(store.getQuads(
                     null,
-                    RML.reference,
-                    DataFactory.literal("prop0=YetAnotherProperty/@Value&prop1=@Name"),
+                    RR.template,
+                    DataFactory.literal("prop0={YetAnotherProperty/@Value}&prop1={@Name}"),
                     null
                 )[0]).toBeDefined();
 
@@ -796,14 +796,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty1/@Value&prop1=YetAnotherProperty1/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty1/@Value}&prop1={YetAnotherProperty1/@Value}"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty2/@Value&prop1=YetAnotherProperty2/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty2/@Value}&prop1={YetAnotherProperty2/@Value}"),
                 null
             )[0]).toBeDefined();
         });
@@ -889,26 +889,26 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty1/@Value&prop1=YetAnotherProperty1/@Value&prop2=AnotherProperty4/@Value&prop3=YetAnotherProperty4/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty1/@Value}&prop1={YetAnotherProperty1/@Value}&prop2={AnotherProperty4/@Value}&prop3={YetAnotherProperty4/@Value}"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty2/@Value&prop1=YetAnotherProperty2/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty2/@Value}&prop1={YetAnotherProperty2/@Value}"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty2.5/@Value&prop1=YetAnotherProperty2.5/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty2.5/@Value}&prop1={YetAnotherProperty2.5/@Value}"),
                 null
             )[0]).toBeDefined();
             const wp3 = store.getQuads(
                 null,
-                RML.reference,
-                DataFactory.literal("prop0=AnotherProperty3/@Value&prop1=YetAnotherProperty3/@Value"),
+                RR.template,
+                DataFactory.literal("prop0={AnotherProperty3/@Value}&prop1={YetAnotherProperty3/@Value}"),
                 null
             );
             expect(wp3.length).toBe(2);
@@ -1001,6 +1001,4 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         ]);
         await rmlStream.end();
     });
-
-    // TODO test a POM join
 });
