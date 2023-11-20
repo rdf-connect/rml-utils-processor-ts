@@ -38,7 +38,7 @@ Logical sources can be marked as trigger-based (`js:trigger`) to indicate that t
 
 ### [`js:IncRMLTransformer`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L142)
 
-This processor transforms a given RML mapping document to a Incremental RML (IncRML) version of itself. Concretely, this means that every defined `rr:TriplesMap` (that has at least 1 defined `rr:predicateObjectMap`) is further expanded into 3 new `rr:TriplesMap`s, each one dedicated to handle entity `create`, `update` and `delete` events. This processor can be used within a CA pipeline as follows:
+This processor transforms a given stream of RML mapping documents to their correspondent Incremental RML (IncRML) representation. Concretely, this means that every defined `rr:TriplesMap` (that has at least 1 defined `rr:predicateObjectMap`) is further expanded into 3 new `rr:TriplesMap`s, each one dedicated to handle entity `create`, `update` and `delete` events. This processor can be used within a CA pipeline as follows:
 
 ```turtle
 @prefix : <https://w3id.org/conn#>.
