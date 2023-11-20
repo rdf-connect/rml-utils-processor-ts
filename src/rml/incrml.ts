@@ -84,12 +84,12 @@ export async function rml2incrml(
             store = new Store();
             // Proceed to expand the mappings and stream them out
             store.addQuads(rdfParser.parse(rml));
-            expand2StateAware(store, config).forEach(async mapping => {
+            for (const mapping of expand2StateAware(store, config)) {
                 console.log(`[rml2incrml processor] Transformed RML mappings for IRI template defined by "${mapping.subjectTemplate}"`);
                 await incrmlStream.push(new N3Writer().quadsToString(
                     mapping.triplesMaps.getQuads(null, null, null, null)
                 ));
-            });
+            }
         } else {
             // Make sure IRIs are unique across mapping sources
             const SENSITIVE_PREDICATES = [RDF.type, RML.referenceFormulation, RR.predicate, RR.constant, RR.termType];
@@ -112,12 +112,12 @@ export async function rml2incrml(
         }
     }).on("end", async () => {
         if (bulkMode) {
-            expand2StateAware(store, config).forEach(async mapping => {
+            for (const mapping of expand2StateAware(store, config)) {
                 console.log(`[rml2incrml processor] Transformed RML mappings for IRI template defined by "${mapping.subjectTemplate}"`);
                 await incrmlStream.push(new N3Writer().quadsToString(
                     mapping.triplesMaps.getQuads(null, null, null, null)
                 ));
-            });
+            }
         }
         await incrmlStream.end();
     });
