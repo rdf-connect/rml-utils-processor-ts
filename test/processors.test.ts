@@ -155,20 +155,20 @@ describe("Tests for RML-related processors", async () => {
         testReader(rmlStream);
 
         expect(incrmlConfig.stateBasePath).toBe(resolve("./state"));
-        expect(incrmlConfig.lifeCycleConfig.predicate.value).toBe("http://ex.org/lifeCycleProp");
-        expect(incrmlConfig.lifeCycleConfig.create.function.value).toBe(IDLAB_FN.explicitCreate);
-        expect(incrmlConfig.lifeCycleConfig.create.type.value).toBe(AS.Create);
-        expect(incrmlConfig.lifeCycleConfig.update.function.value).toBe(IDLAB_FN.implicitUpdate);
-        expect(incrmlConfig.lifeCycleConfig.update.type.value).toBe(AS.Update);
-        expect(incrmlConfig.lifeCycleConfig.delete.function.value).toBe(IDLAB_FN.implicitDelete);
-        expect(incrmlConfig.lifeCycleConfig.delete.type.value).toBe(AS.Delete);
+        expect(incrmlConfig.lifeCycleConfig.predicate).toBe("http://ex.org/lifeCycleProp");
+        expect(incrmlConfig.lifeCycleConfig.create.function).toBe(IDLAB_FN.explicitCreate);
+        expect(incrmlConfig.lifeCycleConfig.create.type).toBe(AS.Create);
+        expect(incrmlConfig.lifeCycleConfig.update.function).toBe(IDLAB_FN.implicitUpdate);
+        expect(incrmlConfig.lifeCycleConfig.update.type).toBe(AS.Update);
+        expect(incrmlConfig.lifeCycleConfig.delete.function).toBe(IDLAB_FN.implicitDelete);
+        expect(incrmlConfig.lifeCycleConfig.delete.type).toBe(AS.Delete);
         expect(incrmlConfig.targetConfig.targetPath).toBe(resolve("./output"));
-        expect(incrmlConfig.targetConfig.timestampPath.value).toBe(DC.modified);
-        expect(incrmlConfig.targetConfig.versionOfPath.value).toBe(DC.custom("isVersionOf"));
-        expect(incrmlConfig.targetConfig.serialization.value).toBe("http://www.w3.org/ns/formats/N-Triples");
+        expect(incrmlConfig.targetConfig.timestampPath).toBe(DC.modified);
+        expect(incrmlConfig.targetConfig.versionOfPath).toBe(DC.custom("isVersionOf"));
+        expect(incrmlConfig.targetConfig.serialization).toBe("http://www.w3.org/ns/formats/N-Triples");
         expect(incrmlConfig.targetConfig.uniqueIRIs).toBeTruthy();
-        expect(incrmlConfig.targetConfig.ldesBaseIRI.value).toBe("http://ex.org/my-ldes");
-        expect(incrmlConfig.targetConfig.shape.value).toBe("http://ex.org/my-ldes/shape");
+        expect(incrmlConfig.targetConfig.ldesBaseIRI).toBe("http://ex.org/my-ldes");
+        expect(incrmlConfig.targetConfig.shape).toBe("http://ex.org/my-ldes/shape");
 
         testWriter(incrmlStream);
 

@@ -218,7 +218,7 @@ js:IncRMLTransformer a js:JsProcess;
   sh:targetClass js:LifeCycleConfig;
   sh:property [
     sh:path js:predicate;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "predicate";
     sh:minCount 1;
     sh:maxCount 1
@@ -246,13 +246,13 @@ js:IncRMLTransformer a js:JsProcess;
   sh:targetClass js:EventConfig;
   sh:property [
     sh:path js:function;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "function";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path js:type;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "type";
     sh:minCount 1;
     sh:maxCount 1
@@ -268,19 +268,19 @@ js:IncRMLTransformer a js:JsProcess;
     sh:maxCount 1
   ], [
     sh:path js:timestampPath;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "timestampPath";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path js:versionOfPath;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "versionOfPath";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path js:serialization;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "serialization";
     sh:minCount 1;
     sh:maxCount 1
@@ -292,13 +292,13 @@ js:IncRMLTransformer a js:JsProcess;
     sh:maxCount 1
   ], [
     sh:path js:ldesBaseIRI;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "ldesBaseIRI";
     sh:minCount 0;
     sh:maxCount 1
   ], [
     sh:path js:shape;
-    sh:datatype xsd:iri;
+    sh:datatype xsd:string;
     sh:name "shape";
     sh:minCount 0;
     sh:maxCount 1
