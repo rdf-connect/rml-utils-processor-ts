@@ -9,7 +9,7 @@ import {
     NamedNode,
     BlankNode,
 } from "n3";
-import { IDLAB_FN, LDES, RDF, RML, RR, FNO, FNML, RMLT, TREE, VOID, XSD } from "../voc";
+import { IDLAB_FN, LDES, RDF, RML, RR, FNO, FNML, RMLT, TREE, VOID, XSD, QL, GREL } from "../voc";
 import { Quad_Object } from "@rdfjs/types";
 
 const { quad, namedNode, blankNode, literal } = DataFactory;
@@ -62,8 +62,8 @@ type TriplesMapsConfig = {
     template: string,
     logSrc: string,
     graphMap: string,
-    logSrcQuad: Quad_Object,
-    graphMapQuad: Quad_Object | undefined,
+    logSrcObj: Quad_Object,
+    graphMapObj: Quad_Object | undefined,
     triplesMaps: string[],
     stateBasePath: string,
     counter: number
@@ -118,9 +118,8 @@ export async function rml2incrml(
                     mapping.triplesMaps.getQuads(null, null, null, null)
                 ));
             });
-
-            await incrmlStream.end();
         }
+        await incrmlStream.end();
     });
 }
 
@@ -169,8 +168,8 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
                                 template,
                                 logSrc,
                                 graphMap,
-                                logSrcQuad: logSrcObj._subject,
-                                graphMapQuad: graphMapObj._subject,
+                                logSrcObj: logSrcObj._subject,
+                                graphMapObj: graphMapObj._subject,
                                 triplesMaps: graphMapObj.triplesMaps,
                                 stateBasePath: config.stateBasePath,
                                 counter
@@ -271,7 +270,7 @@ function writeToMap(
     logSrcVal: string,
     triplesMap: string,
     graphMap: string,
-    graphMapQuad?: Quad_Object
+    graphMapObj?: Quad_Object
 ): void {
     if (map.has(template)) {
         const obj = map.get(template)!;
@@ -282,7 +281,7 @@ function writeToMap(
             } else {
                 // New graph map for this logical source
                 obj[logSrcVal][graphMap] = {
-                    _subject: graphMapQuad,
+                    _subject: graphMapObj,
                     triplesMaps: [triplesMap]
                 };
             }
@@ -291,7 +290,7 @@ function writeToMap(
             obj[logSrcVal] = {
                 _subject: logSrcObj,
                 [graphMap]: {
-                    _subject: graphMapQuad,
+                    _subject: graphMapObj,
                     triplesMaps: [triplesMap]
                 }
             };
@@ -302,7 +301,7 @@ function writeToMap(
             [logSrcVal]: {
                 _subject: logSrcObj,
                 [graphMap]: {
-                    _subject: graphMapQuad,
+                    _subject: graphMapObj,
                     triplesMaps: [triplesMap]
                 }
             }
@@ -321,8 +320,8 @@ function generateTriplesMapQuads(
         template,
         logSrc,
         graphMap,
-        logSrcQuad,
-        graphMapQuad,
+        logSrcObj,
+        graphMapObj,
         triplesMaps,
         stateBasePath,
         counter
@@ -384,15 +383,15 @@ function generateTriplesMapQuads(
     // New rr:TriplesMap definition
     newTMQuads.push(...[
         quad(TM, RDF.terms.type, RR.terms.TriplesMap),
-        quad(TM, RML.terms.logicalSource, logSrcQuad),
+        quad(TM, RML.terms.logicalSource, logSrcObj),
         quad(TM, RR.terms.subjectMap, FTM),
         quad(FTM, RDF.terms.type, RR.terms.FunctionTermMap)
     ]);
 
     // Optional rr:graphMap
-    if (graphMapQuad) {
+    if (graphMapObj) {
         newTMQuads.push(...[
-            quad(FTM, RR.terms.graphMap, graphMapQuad)
+            quad(FTM, RR.terms.graphMap, graphMapObj)
         ]);
     }
 
@@ -459,7 +458,6 @@ function generateTriplesMapQuads(
     if (eventType === "update" && lifeCycleModel.update.function === IDLAB_FN.implicitUpdate) {
         const WATCHED_POM = namedNode(`${BASE}${eventType}_watched_POM_${counter}`);
         const WATCHED_OM = namedNode(`${BASE}${eventType}_watched_OM_${counter}`);
-        const wpTemplate: string[] = [];
         const propExpressions = new Set();
 
         // Extract all used properties
@@ -501,15 +499,68 @@ function generateTriplesMapQuads(
         });
 
         let c = 0;
-        propExpressions.forEach(prop => {
-            wpTemplate.push(`prop${c}={${prop}}`);
-            c++;
-        });
+        const watchedPropsQs: Quad[] = [];
+        // Use XPath concat operator if dealing with an XML source.
+        // Use the grel:array_join function otherwise.
+        const isXPath = store.getObjects(logSrcObj, RML.referenceFormulation, null)[0].value === QL.XPath;
+
+        if (isXPath) {
+            const wpTemplate: string[] = [];
+            propExpressions.forEach(prop => {
+                wpTemplate.push(`'prop${c}=' || ${prop}`);
+                c++;
+            });
+            if (propExpressions.size > 0) {
+                watchedPropsQs.push(
+                    quad(WATCHED_OM, RML.terms.reference, literal(`(${wpTemplate.join(" || '&' || ")})`))
+                );
+            } else {
+                watchedPropsQs.push(
+                    quad(WATCHED_OM, RML.terms.reference, literal(""))
+                );
+            }
+        } else {
+            if (propExpressions.size > 0) {
+                const WATCHED_FV = namedNode(`${BASE}${eventType}_watched_FV_${counter}`);
+                const WATCHED_FV_EXEC_POM = namedNode(`${BASE}${eventType}_watched_FV_exec_POM_${counter}`);
+                const WATCHED_FV_EXEC_OM = namedNode(`${BASE}${eventType}_watched_FV_exec_OM_${counter}`);
+                const WATCHED_FV_SEP_POM = namedNode(`${BASE}${eventType}_watched_FV_sep_POM_${counter}`);
+                const WATCHED_FV_SEP_OM = namedNode(`${BASE}${eventType}_watched_FV_sep_OM_${counter}`);
+                watchedPropsQs.push(...[
+                    quad(WATCHED_OM, FNML.terms.functionValue, WATCHED_FV),
+                    quad(WATCHED_FV, RR.terms.predicateObjectMap, WATCHED_FV_EXEC_POM),
+                    quad(WATCHED_FV_EXEC_POM, RR.terms.predicate, FNO.terms.executes),
+                    quad(WATCHED_FV_EXEC_POM, RR.terms.objectMap, WATCHED_FV_EXEC_OM),
+                    quad(WATCHED_FV_EXEC_OM, RR.terms.constant, GREL.terms.array_join),
+                    quad(WATCHED_FV, RR.terms.predicateObjectMap, WATCHED_FV_SEP_POM),
+                    quad(WATCHED_FV_SEP_POM, RR.terms.predicate, GREL.terms.param_string_sep),
+                    quad(WATCHED_FV_SEP_POM, RR.terms.objectMap, WATCHED_FV_SEP_OM),
+                    quad(WATCHED_FV_SEP_OM, RR.terms.constant, literal("&")),
+                ]);
+
+                propExpressions.forEach(prop => {
+                    const WATCHED_FV_PROP_POM = namedNode(`${BASE}${eventType}_watched_FV_prop${c}_POM_${counter}`);
+                    const WATCHED_FV_PROP_OM = namedNode(`${BASE}${eventType}_watched_FV_prop${c}_OM_${counter}`);
+                    watchedPropsQs.push(...[
+                        quad(WATCHED_FV, RR.terms.predicateObjectMap, WATCHED_FV_PROP_POM),
+                        quad(WATCHED_FV_PROP_POM, RR.terms.predicate, GREL.terms.param_a),
+                        quad(WATCHED_FV_PROP_POM, RR.terms.objectMap, WATCHED_FV_PROP_OM),
+                        quad(WATCHED_FV_PROP_OM, RR.terms.constant, literal(`prop${c}=${prop}`))
+                    ]);
+                    c++;
+                });
+            } else {
+                watchedPropsQs.push(
+                    quad(WATCHED_OM, RML.terms.reference, literal(""))
+                );
+            }
+        }
+
         newTMQuads.push(...[
             quad(FV, RR.terms.predicateObjectMap, WATCHED_POM),
             quad(WATCHED_POM, RR.terms.predicate, IDLAB_FN.terms.watchedProperty),
             quad(WATCHED_POM, RR.terms.objectMap, WATCHED_OM),
-            quad(WATCHED_OM, RR.terms.template, literal(wpTemplate.join("&")))
+            ...watchedPropsQs
         ]);
     }
 

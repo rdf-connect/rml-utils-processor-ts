@@ -37,6 +37,20 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 ]
         `;
     };
+    const TM2 = (i, source, template) => {
+        return `
+            <http://ex.org/m${i}> a rr:TriplesMap ;
+                rml:logicalSource [
+                    a rml:LogicalSource ;
+                    rml:source "${source}" ;
+                    rml:referenceFormulation ql:CSV
+                ] ;
+                rr:subjectMap [
+                    a rr:SubjectMap ;
+                    rr:template "${template}"
+                ]
+        `;
+    };
     const TM_FN = (i, source, template, graph?, clazz?) => {
         return `
             <http://ex.org/ls0> a rml:LogicalSource ;
@@ -190,8 +204,8 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties template is properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty/@Value)"),
                 null
             )[0]).toBeDefined();
         });
@@ -204,6 +218,63 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             ${TM(0, "dataset/data.xml", "http://ex.org/instances/{Property/@Value}", "<http://ex.org/myGraph>")};
             ${POM("http://ex.org/ns/type", { pred: "rr:template", obj: "\"http://ex.org/instance/{AnotherProperty/@Value}\"" })};
             ${POM("http://ex.org/ns/someProperty", { pred: "rr:constant", obj: "\"Some Value\"" })}.
+        `;
+        await rmlStream.push(mapping);
+    });
+
+    test("1 RML mapping with 2 Triples Map without explicit target", async () => {
+        const rmlStream = new SimpleStream<string>();
+        const incrmlStream = new SimpleStream<string>();
+        const config: IncRMLConfig = {
+            stateBasePath: ".",
+            lifeCycleConfig: {
+                predicate: "http://ex.org/ns/lifeCycleProperty",
+                create: { function: IDLAB_FN.explicitCreate, type: AS.Create },
+                update: { function: IDLAB_FN.implicitUpdate, type: AS.Update },
+                delete: { function: IDLAB_FN.implicitDelete, type: AS.Delete }
+            }
+        };
+
+        let count = 0;
+        const store = new Store();
+        incrmlStream.data(data => {
+            store.addQuads(new Parser().parse(data));
+            if (count < 1) {
+                count++
+            } else {
+                // Check there are 6 Triples Maps
+                expect(store.getQuads(null, RDF.type, RR.TriplesMap, null).length).toBe(6);
+
+                // Check there are Object Maps pointing to lifecycle entities
+                expect(store.getQuads(null, RR.predicate, config.lifeCycleConfig.predicate, null).length).toBe(6);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.create.type, null).length).toBe(2);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.update.type, null).length).toBe(2);
+                expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(2);
+
+                // Check that the watched properties template is properly defined
+                expect(store.getQuads(
+                    null,
+                    RML.reference,
+                    DataFactory.literal("('prop0=' || AnotherProperty/@Value)"),
+                    null
+                )[0]).toBeDefined();
+                expect(store.getQuads(null, RR.constant, DataFactory.literal("prop0=Column2"), null)[0]).toBeDefined();
+                expect(store.getQuads(null, RR.constant, DataFactory.literal("prop1=Column3"), null)[0]).toBeDefined();
+            }
+        });
+
+        await rml2incrml(rmlStream, config, incrmlStream);
+
+        // Push a mapping
+        const mapping = `
+            ${PREFIXES}
+            ${TM(0, "dataset/data.xml", "http://ex.org/instances/{Property/@Value}")};
+            ${POM("http://ex.org/ns/type", { pred: "rr:template", obj: "\"http://ex.org/instance/{AnotherProperty/@Value}\"" })};
+            ${POM("http://ex.org/ns/someProperty", { pred: "rr:constant", obj: "\"Some Value\"" })}.
+
+            ${TM2(1, "dataset/data.csv", "http://ex.org/instances/{Column1}")};
+            ${POM("http://ex.org/ns/type", { pred: "rr:template", obj: "\"http://ex.org/instance/{Column2}\"" })};
+            ${POM("http://ex.org/ns/someProperty", { pred: "rml:reference", obj: "\"Column3\"" })}.
         `;
         await rmlStream.push(mapping);
     });
@@ -237,8 +308,8 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties template is properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty/@Value)"),
                 null
             )[0]).toBeDefined();
         });
@@ -304,8 +375,8 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties template is properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={YetAnotherProperty/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty/@Value || '&' || 'prop1=' || YetAnotherProperty/@Value)"),
                 null
             )[0]).toBeDefined();
         });
@@ -368,25 +439,25 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             expect(store.getQuads(null, RR.constant, config.lifeCycleConfig.delete.type, null).length).toBe(2);
 
             // Check that states are different for all Triples Maps
-            const statePOMs = store.getQuads(null, RR.predicate, IDLAB_FN.state, null);
+            const statePOMs = store.getSubjects(RR.predicate, IDLAB_FN.state, null);
             const states: string[] = [];
             statePOMs.forEach(pom => {
-                const om = store.getQuads(pom.subject, RR.objectMap, null, null)[0].object;
-                states.push(store.getQuads(om, RR.constant, null, null)[0].object.value);
+                const om = store.getObjects(pom, RR.objectMap, null)[0];
+                states.push(store.getObjects(om, RR.constant, null)[0].value);
             });
             expect(new Set(states).size).toBe(states.length);
 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty/@Value)"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={YetAnotherProperty/@Value}&prop1={@Name}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || YetAnotherProperty/@Value || '&' || 'prop1=' || @Name)"),
                 null
             )[0]).toBeDefined();
         });
@@ -422,9 +493,9 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         const store = new Store();
         let count = 0;
         incrmlStream.data(data => {
+            store.addQuads(new Parser().parse(data));
             // There should be 3 new mapping files produced from the 3 different IRI templates
-            if (count < 3) {
-                store.addQuads(new Parser().parse(data));
+            if (count < 2) {
                 count++;
             } else {
                 // Check there are 9 Triples Maps
@@ -447,7 +518,7 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 expect(new Set(states).size).toBe(states.length);
 
                 // Check that the watched properties templates are properly defined
-                expect(store.getQuads(null, RR.template, DataFactory.literal(""), null).length).toBe(3);
+                expect(store.getQuads(null, RML.reference, DataFactory.literal(""), null).length).toBe(3);
             }
         });
 
@@ -525,14 +596,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={SomeProperty/@Name}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty/@Value || '&' || 'prop1=' || SomeProperty/@Name)"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={@Name}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty/@Value || '&' || 'prop1=' || @Name)"),
                 null
             )[0]).toBeDefined();
         });
@@ -569,9 +640,9 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         const store = new Store();
         let count = 0;
         incrmlStream.data(data => {
+            store.addQuads(new Parser().parse(data));
             // There should be 2 new mapping files produced from the 2 different IRI templates
-            if (count < 2) {
-                store.addQuads(new Parser().parse(data));
+            if (count < 1) {
                 count++;
             } else {
                 // Check there are 6 Triples Maps
@@ -596,14 +667,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 // Check that the watched properties templates are properly defined
                 expect(store.getQuads(
                     null,
-                    RR.template,
-                    DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={SomeProperty/@Name}"),
+                    RML.reference,
+                    DataFactory.literal("('prop0=' || AnotherProperty/@Value || '&' || 'prop1=' || SomeProperty/@Name)"),
                     null
                 )[0]).toBeDefined();
                 expect(store.getQuads(
                     null,
-                    RR.template,
-                    DataFactory.literal("prop0={YetAnotherProperty/@Value}&prop1={@Name}"),
+                    RML.reference,
+                    DataFactory.literal("('prop0=' || YetAnotherProperty/@Value || '&' || 'prop1=' || @Name)"),
                     null
                 )[0]).toBeDefined();
 
@@ -676,9 +747,9 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         const store = new Store();
         let count = 0;
         incrmlStream.data(data => {
+            store.addQuads(new Parser().parse(data));
             // There should be 2 new mapping files produced from the 2 different IRI templates
-            if (count < 2) {
-                store.addQuads(new Parser().parse(data));
+            if (count < 1) {
                 count++;
             } else {
                 // Check that Logical Target triples are defined
@@ -712,14 +783,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
                 // Check that the watched properties templates are properly defined
                 expect(store.getQuads(
                     null,
-                    RR.template,
-                    DataFactory.literal("prop0={AnotherProperty/@Value}&prop1={SomeProperty/@Name}"),
+                    RML.reference,
+                    DataFactory.literal("('prop0=' || AnotherProperty/@Value || '&' || 'prop1=' || SomeProperty/@Name)"),
                     null
                 )[0]).toBeDefined();
                 expect(store.getQuads(
                     null,
-                    RR.template,
-                    DataFactory.literal("prop0={YetAnotherProperty/@Value}&prop1={@Name}"),
+                    RML.reference,
+                    DataFactory.literal("('prop0=' || YetAnotherProperty/@Value || '&' || 'prop1=' || @Name)"),
                     null
                 )[0]).toBeDefined();
 
@@ -796,14 +867,14 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty1/@Value}&prop1={YetAnotherProperty1/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty1/@Value || '&' || 'prop1=' || YetAnotherProperty1/@Value)"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty2/@Value}&prop1={YetAnotherProperty2/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty2/@Value || '&' || 'prop1=' || YetAnotherProperty2/@Value)"),
                 null
             )[0]).toBeDefined();
         });
@@ -889,26 +960,26 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
             // Check that the watched properties templates are properly defined
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty1/@Value}&prop1={YetAnotherProperty1/@Value}&prop2={AnotherProperty4/@Value}&prop3={YetAnotherProperty4/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty1/@Value || '&' || 'prop1=' || YetAnotherProperty1/@Value || '&' || 'prop2=' || AnotherProperty4/@Value || '&' || 'prop3=' || YetAnotherProperty4/@Value)"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty2/@Value}&prop1={YetAnotherProperty2/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty2/@Value || '&' || 'prop1=' || YetAnotherProperty2/@Value)"),
                 null
             )[0]).toBeDefined();
             expect(store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty2.5/@Value}&prop1={YetAnotherProperty2.5/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty2.5/@Value || '&' || 'prop1=' || YetAnotherProperty2.5/@Value)"),
                 null
             )[0]).toBeDefined();
             const wp3 = store.getQuads(
                 null,
-                RR.template,
-                DataFactory.literal("prop0={AnotherProperty3/@Value}&prop1={YetAnotherProperty3/@Value}"),
+                RML.reference,
+                DataFactory.literal("('prop0=' || AnotherProperty3/@Value || '&' || 'prop1=' || YetAnotherProperty3/@Value)"),
                 null
             );
             expect(wp3.length).toBe(2);

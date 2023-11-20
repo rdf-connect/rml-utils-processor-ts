@@ -94,6 +94,9 @@ export const CSVW = createUriAndTermNamespace(
 
 export const GREL = createUriAndTermNamespace(
   "http://users.ugent.be/~bjdmeest/function/grel.ttl#",
+  "array_join",
+  "param_a",
+  "param_string_sep",
   "valueParameter",
   "valueParameter2"
 );
