@@ -541,7 +541,7 @@ function sleep(x: number): Promise<unknown> {
     return new Promise(resolve => setTimeout(resolve, x));
 }
 
-/*afterAll(async () => {
+afterAll(async () => {
     // Clean up temporal files
     await deleteAsync(["/tmp/rml*"], { force: true });
-});*/
+});
