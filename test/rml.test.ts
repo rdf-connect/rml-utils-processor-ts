@@ -18,6 +18,8 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         @prefix td: <https://www.w3.org/2019/wot/td#> .
         @prefix htv: <http://www.w3.org/2011/http#> .
         @prefix hctl: <https://www.w3.org/2019/wot/hypermedia#> .
+        @prefix ldes: <https://w3id.org/ldes#> .
+        @prefix dct: <http://purl.org/dc/terms/> .
         @prefix ex: <http://example.org/> .
     `;
 
@@ -40,6 +42,63 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
                         a void:Dataset ;
                         void:dataDump <file:///results/output.nq>
                     ]
+                ] ;
+                rr:graphMap [
+                    a rr:GraphMap ;
+                    rr:constant "http://example.org/myNamedGraph"
+                ]
+            ] ;
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicateMap [
+                    a rr:PredicateMap ;
+                    rr:constant "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                ] ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rr:constant <http://example.org/Entity> ;
+                    rr:termType rr:IRI
+                ]
+            ] ;
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicateMap [
+                    a rr:PredicateMap ;
+                    rr:constant rdfs:label
+                ] ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rml:reference "@label" ;
+                    rr:termType rr:Literal
+                ]
+            ] .
+    `;
+
+    const RML_TM_LOCAL_SOURCE_AND_LDES_TARGET = `
+        ex:map_test-mapping_000 a rr:TriplesMap ;
+            rdfs:label "test-mapping" ;
+            rml:logicalSource [
+                a rml:LogicalSource ;
+                rml:source "dataset/data.xml" ;
+                rml:iterator "//data" ;
+                rml:referenceFormulation ql:XPath
+            ] ;
+            rr:subjectMap [
+                a rr:SubjectMap ;
+                rr:template "http://example.org/{@id}" ;
+                rml:logicalTarget [
+                    a rmlt:EventStreamTarget ;
+                    rmlt:serialization formats:N-Quads ;
+                    rmlt:target [
+                        a void:Dataset ;
+                        void:dataDump <file:///results/output.nq>
+                    ];
+                    rmlt:ldes [ 
+                        a ldes:EvenStream;
+                        ldes:timestampPath dct:modified;
+                        ldes:versionOfPath dct:isVersionOf
+                    ];
+                    rmlt:ldesGenerateImmutableIRI "true"^^xsd:boolean
                 ] ;
                 rr:graphMap [
                     a rr:GraphMap ;
@@ -186,6 +245,63 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const rmlDoc = `
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_TARGET}
+        `;
+        // Define function parameters
+        const mappingReader = new SimpleStream<string>();
+        const sourceInputStream = new SimpleStream<string>();
+        const targetOutputStream = new SimpleStream<string>();
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                newLocation: "",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: false
+            }
+        ];
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                newLocation: "",
+                writer: targetOutputStream
+            }
+        ];
+
+        // Check output
+        targetOutputStream.data((data: string) => {
+            const store = new Store();
+            store.addQuads(new Parser().parse(data));
+
+            expect(store.getQuads(null, null, null, null).length).toBe(4);
+            expect(store.getQuads(
+                "http://example.org/001",
+                RDF.type,
+                null,
+                "http://example.org/myNamedGraph").length
+            ).toBe(1);
+            expect(store.getQuads(
+                "http://example.org/002",
+                RDFS.label,
+                null,
+                "http://example.org/myNamedGraph").length
+            ).toBe(1);
+        });
+
+        // Execute function
+        await rmlMapper(mappingReader, sources, targets, undefined, "/tmp/rmlMapper.jar");
+
+        // Push mappings input data
+        await mappingReader.push(rmlDoc);
+        await mappingReader.end();
+
+        // Push raw input data
+        await sourceInputStream.push(LOCAL_RAW_DATA);
+    });
+
+    test("Mapping process with declared logical source and LDES target", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_LDES_TARGET}
         `;
         // Define function parameters
         const mappingReader = new SimpleStream<string>();
@@ -425,7 +541,7 @@ function sleep(x: number): Promise<unknown> {
     return new Promise(resolve => setTimeout(resolve, x));
 }
 
-afterAll(async () => {
+/*afterAll(async () => {
     // Clean up temporal files
     await deleteAsync(["/tmp/rml*"], { force: true });
-});
+});*/

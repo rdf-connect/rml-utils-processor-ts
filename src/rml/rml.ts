@@ -161,7 +161,7 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
     const quads = new Parser().parse(input);
     const store = new Store(quads);
 
-    const targetLens2 = empty<Cont>()
+    const dataDumpLens = empty<Cont>()
         .map(({ id }) => ({ subject: id }))
         .and(
             pred(VOID.terms.dataDump)
@@ -170,12 +170,16 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
         )
         .map(([{ subject }, { target }]) => ({ subject, target }));
 
-    const extractTarget = pred(RMLT.terms.target).one().then(targetLens2);
+    const extractTarget = pred(RMLT.terms.target).one().then(dataDumpLens);
 
-    const targetLens = match(undefined, RDF.terms.type, RMLT.terms.LogicalTarget)
+    const targetLens1 = match(undefined, RDF.terms.type, RMLT.terms.LogicalTarget)
         .thenAll(subject)
         .thenAll(extractTarget);
-    const foundTargets = targetLens.execute(quads);
+    const targetLens2 = match(undefined, RDF.terms.type, RMLT.terms.EventStreamTarget)
+        .thenAll(subject)
+        .thenAll(extractTarget);
+
+    const foundTargets = targetLens1.execute(quads).concat(targetLens2.execute(quads));
 
     for (let foundTarget of foundTargets) {
         if (targets) {
