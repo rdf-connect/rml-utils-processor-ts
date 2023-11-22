@@ -219,8 +219,6 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
             }
         }
     }
-
-    //TODO: make sure that graph map is preserved
     
     // Extract logical Sources from incoming mapping
     const extractSource = empty<Cont>()
