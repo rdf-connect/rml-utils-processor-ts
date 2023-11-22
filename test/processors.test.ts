@@ -131,8 +131,7 @@ describe("Tests for RML-related processors", async () => {
                         js:shape <http://ex.org/my-ldes/shape>
                     ]
                 ];
-                js:incrmlStream <jw>;
-                js:bulkMode true.
+                js:incrmlStream <jw>.
         `;
 
         const source: Source = {
@@ -148,9 +147,9 @@ describe("Tests for RML-related processors", async () => {
 
         const argss = extractSteps(env, quads, config);
         expect(argss.length).toBe(1);
-        expect(argss[0].length).toBe(4);
+        expect(argss[0].length).toBe(3);
 
-        const [[rmlStream, incrmlConfig, incrmlStream, bulkMode]] = argss;
+        const [[rmlStream, incrmlConfig, incrmlStream]] = argss;
 
         testReader(rmlStream);
 
@@ -171,8 +170,6 @@ describe("Tests for RML-related processors", async () => {
         expect(incrmlConfig.targetConfig.shape).toBe("http://ex.org/my-ldes/shape");
 
         testWriter(incrmlStream);
-
-        expect(bulkMode).toBeTruthy();
 
         await checkProc(env.file, env.func);
     });

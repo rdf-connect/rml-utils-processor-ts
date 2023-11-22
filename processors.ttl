@@ -157,10 +157,6 @@ js:IncRMLTransformer a js:JsProcess;
       a fnom:PositionParameterMapping;
       fnom:functionParameter "incrmlStream";
       fnom:implementationParameterPosition "2"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "bulkMode";
-      fnom:implementationParameterPosition "3"^^xsd:integer;
     ];
   ].
 
@@ -183,12 +179,6 @@ js:IncRMLTransformer a js:JsProcess;
     sh:name "incrmlStream";
     sh:class :WriterChannel;
     sh:minCount 1;
-    sh:maxCount 1
-  ], [
-    sh:path js:bulkMode;
-    sh:name "bulkMode";
-    sh:datatype xsd:boolean;
-    sh:minCount 0;
     sh:maxCount 1
   ].
 

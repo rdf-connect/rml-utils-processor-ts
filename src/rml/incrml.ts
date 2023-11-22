@@ -39,11 +39,6 @@ type LDESTargetConfig = {
     shape?: string
 }
 
-type MappingGroup = {
-    subjectTemplate: string,
-    triplesMaps: Store
-};
-
 type TriplesMapsPerGraphMap = {
     _subject: Quad_Object | undefined,
     triplesMaps: string[]
@@ -72,65 +67,30 @@ type TriplesMapsConfig = {
 export async function rml2incrml(
     rmlStream: Stream<string>,
     config: IncRMLConfig,
-    incrmlStream: Writer<string>,
-    bulkMode?: boolean
+    incrmlStream: Writer<string>
 ) {
-    let store = new Store();
-    let index = 0;
-
     rmlStream.data(async rml => {
         const rdfParser = new Parser();
-        if (!bulkMode) {
-            store = new Store();
-            // Proceed to expand the mappings and stream them out
-            store.addQuads(rdfParser.parse(rml));
-            for (const mapping of expand2StateAware(store, config)) {
-                console.log(`[rml2incrml processor] Transformed RML mappings for IRI template defined by "${mapping.subjectTemplate}"`);
-                await incrmlStream.push(new N3Writer().quadsToString(
-                    mapping.triplesMaps.getQuads(null, null, null, null)
-                ));
-            }
-        } else {
-            // Make sure IRIs are unique across mapping sources
-            const SENSITIVE_PREDICATES = [RDF.type, RML.referenceFormulation, RR.predicate, RR.constant, RR.termType];
-            store.addQuads(rdfParser.parse(rml).map(q => {
-                // Append index number to all NNodes/BNodes to avoid conflicts across mapping files
-                const uniqueQuad = quad(
-                    q.subject instanceof NamedNode ? namedNode(`${q.subject.value}_${index}`)
-                        : q.subject instanceof BlankNode ? blankNode(`${q.subject.value}_${index}`) : q.subject,
-                    q.predicate,
-                    // Except for the sensitive predicate cases
-                    SENSITIVE_PREDICATES.includes(q.predicate.value) ? q.object
-                        : q.object instanceof NamedNode ? namedNode(`${q.object.value}_${index}`)
-                            : q.object instanceof BlankNode ? blankNode(`${q.object.value}_${index}`) : q.object,
-                    q.graph
-                );
-
-                return uniqueQuad;
-            }));
-            index++;
-        }
-    }).on("end", async () => {
-        if (bulkMode) {
-            for (const mapping of expand2StateAware(store, config)) {
-                console.log(`[rml2incrml processor] Transformed RML mappings for IRI template defined by "${mapping.subjectTemplate}"`);
-                await incrmlStream.push(new N3Writer().quadsToString(
-                    mapping.triplesMaps.getQuads(null, null, null, null)
-                ));
-            }
-        }
-        await incrmlStream.end();
-    });
+        // Proceed to expand the mappings and stream them out
+        console.log("[rml2incrml processor] Transforming RML to IncRML mappings");
+        await incrmlStream.push(new N3Writer().quadsToString(
+            expand2IncRML(rdfParser.parse(rml), config)
+        ));
+    }).on("end", async () => await incrmlStream.end());
 }
 
-function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[] {
+function expand2IncRML(rmlQuads: Quad[], config: IncRMLConfig): Quad[] {
+    const rmlStore = new Store();
+    rmlStore.addQuads(rmlQuads);
     /**
-     * Extract all rr:TriplesMaps per rr:template and rml:LogicalSource.
+     * Group all rr:TriplesMaps per 
+     * subject IRI, source + iterator and named graph.
+     * 
      * It gives the following data structure:
      * 
      *  Map { 
      *      rr:template | rr:constant | rml:reference | fnml:functionValue => { 
-     *          rml:logicalSource: {
+     *          rml:source + rml:iterator: {
      *              "_subject": Quad_Object,
      *              rr:graphMap/rr:constant: {
      *                  "_subject": Quad_Object,
@@ -144,14 +104,13 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
     const triplesMapsPerTemplate = extractTriplesMapsPerTemplate(rmlStore);
     // Incremental sequence used to guarantee unique IRIs
     let counter = 0;
-    // Resulting array of "mapping files"
-    const result: MappingGroup[] = [];
+    const incRMLStore = new Store();
 
-    // Iterate over sets of rr:TripleMaps and expand them into a state-aware version (Create, Update and Delete).
-    // We create a single TriplesMap per event, that merges all TMs associated 
+    // Iterate over sets of rr:TripleMaps and expand them into an incRML version 
+    // based on Create, Update and Delete events.
+    // We create a single Triples Map per event, that merges all TMs associated 
     // with the same IRI template, Logical Source and Named Graph (if any)
     for (const template of triplesMapsPerTemplate.keys()) {
-        const fileStore: Store = new Store();
         const templateObj: GraphMapsPerSource = triplesMapsPerTemplate.get(template)!;
 
         for (const logSrc of Object.keys(templateObj)) {
@@ -160,9 +119,10 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
             for (const graphMap of Object.keys(logSrcObj)) {
                 if (graphMap !== "_subject") {
                     const graphMapObj = <TriplesMapsPerGraphMap>logSrcObj[graphMap]!;
+                    console.log(`[rml2incrml processor] expanding Triples Map for subject template ${template}`);
 
                     ["create", "update", "delete"].forEach(event => {
-                        fileStore.addQuads(generateTriplesMapQuads(
+                        incRMLStore.addQuads(generateTriplesMapQuads(
                             {
                                 eventType: <EntityEvent>event,
                                 template,
@@ -184,16 +144,12 @@ function expand2StateAware(rmlStore: Store, config: IncRMLConfig): MappingGroup[
                 }
             }
         }
-
-        // Add missing referenced quads from original mappings
-        fileStore.addQuads(complementQuads(fileStore, rmlStore));
-        result.push({
-            subjectTemplate: template,
-            triplesMaps: fileStore
-        });
     }
 
-    return result;
+    // Add missing referenced quads from original mappings
+    incRMLStore.addQuads(complementQuads(incRMLStore, rmlStore));
+
+    return incRMLStore.getQuads(null, null, null, null);
 }
 
 function extractTriplesMapsPerTemplate(store: Store): Map<string, GraphMapsPerSource> {
@@ -240,6 +196,7 @@ function extractTriplesMapsPerTemplate(store: Store): Map<string, GraphMapsPerSo
                     // Get a reference quad of the related Logical Source (and GraphMap if any) 
                     const logSrcObj = store.getObjects(subMapQ.subject, RML.logicalSource, null)[0];
                     const logSrcVal = store.getObjects(logSrcObj, RML.source, null)[0].value;
+                    const iterator = store.getObjects(logSrcObj, RML.iterator, null)[0];
 
                     const graphMapObj = store.getObjects(subMapQ.object, RR.graphMap, null)[0];
                     const graphMap = graphMapObj
@@ -250,7 +207,7 @@ function extractTriplesMapsPerTemplate(store: Store): Map<string, GraphMapsPerSo
                         map,
                         template,
                         logSrcObj,
-                        logSrcVal,
+                        `${logSrcVal}${iterator ? iterator.value : ""}`,
                         subMapQ.subject.value,
                         graphMap,
                         graphMapObj ? graphMapObj : undefined
