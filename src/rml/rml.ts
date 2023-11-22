@@ -32,6 +32,7 @@ export type Target = {
     location: string;
     writer: Writer<string>;
     newLocation: string;
+    data: string;
 };
 
 type SourceDataUpdate = {
@@ -219,6 +220,8 @@ function transformMapping(input: string, sources?: Source[], targets?: Target[],
         }
     }
 
+    //TODO: make sure that graph map is preserved
+    
     // Extract logical Sources from incoming mapping
     const extractSource = empty<Cont>()
         .map(({ id }) => ({ subject: id }))
@@ -314,23 +317,25 @@ async function executeMappings(
         });
         await new Promise((res) => proc.on("exit", res));
 
-        out += await readFile(outputFile, { encoding: "utf8" });
-
-        // TODO: 
-        // Not all produced triples should go to all declared logical targets.
-        // Logical targets are defined per SubjectMap, 
-        // therefore we need to pair them up accordingly.
         if (targets) {
             for (let target of targets) {
-                const file = await readFile(target.newLocation, { encoding: "utf8" });
-                await target.writer.push(file);
+                if (!target.data) {
+                    target.data = "";
+                }
+                target.data += await readFile(target.newLocation, { encoding: "utf8" });
             }
+        } else {
+            out += await readFile(outputFile, { encoding: "utf8" });
         }
         console.log("[rmlMapper processor]", "Done", mappingFile, `in ${new Date().getTime() - t0.getTime()} ms`);
     }
 
     console.log("[rmlMapper processor]", "All done");
-    if (defaultWriter) {
+    if (targets) {
+        targets.forEach(async target => {
+            await target.writer.push(target.data);
+        });
+    } else if (defaultWriter) {
         await defaultWriter.push(out);
     }
 }

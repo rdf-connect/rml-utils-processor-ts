@@ -263,7 +263,8 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             {
                 location: "file:///results/output.nq",
                 newLocation: "",
-                writer: targetOutputStream
+                writer: targetOutputStream,
+                data: ""
             }
         ];
 
@@ -320,7 +321,8 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             {
                 location: "file:///results/output.nq",
                 newLocation: "",
-                writer: targetOutputStream
+                writer: targetOutputStream,
+                data: ""
             }
         ];
 
@@ -377,7 +379,8 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             {
                 location: "file:///results/output.nq",
                 newLocation: "",
-                writer: targetOutputStream
+                writer: targetOutputStream,
+                data: ""
             }
         ];
 
