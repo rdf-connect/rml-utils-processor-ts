@@ -38,7 +38,11 @@ Logical sources can be marked as trigger-based (`js:trigger`) to indicate that t
 
 ### [`js:IncRMLTransformer`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L142)
 
-This processor transforms a given stream of RML mapping documents to their correspondent Incremental RML (IncRML) representation. Concretely, this means that every defined `rr:TriplesMap` (that has at least 1 defined `rr:predicateObjectMap`) is further expanded into 3 new `rr:TriplesMap`s, each one dedicated to handle entity `create`, `update` and `delete` events. This processor can be used within a CA pipeline as follows:
+This processor transforms a given stream of RML mapping documents to their correspondent Incremental RML (IncRML) representation. Concretely, this means that every defined `rr:TriplesMap` (that has at least 1 defined `rr:predicateObjectMap`) is further expanded into 3 new `rr:TriplesMap`s, each one dedicated to handle entity `create`, `update` and `delete` events. The processor will merge Triple Maps that produce the same Subject IRI, use the same Logical Source and belong to the same Named Graph (if any).
+
+An optional configuration can be given to produce unique IRIs (timestamp-based) by defining a LDES Logical Target. However, when dealing with multiple mapping documents, it is assumed that all Triples Maps related to an entity will be present in the same document. Otherwise multiple unique IRIs will be produced for subject triples that belong to the same entity.
+
+This processor can be used within a CA pipeline as follows:
 
 ```turtle
 @prefix : <https://w3id.org/conn#>.
@@ -77,8 +81,7 @@ This processor transforms a given stream of RML mapping documents to their corre
             js:shape <http://ex.org/my-ldes/shape>
         ]
     ];
-    js:incrmlStream <incrmlStream>;
-    js:bulkMode true. # Optional, to handle multiple mapping files together
+    js:incrmlStream <incrmlStream>.
 ```
 
 The configuration (`js:config`) of the processor includes a specification of the predicate (`js:lifeCycleConfig/js:predicate`) that will be used to characterize entities and the particular FnO functions that will be used to detect create, update and delete events.
