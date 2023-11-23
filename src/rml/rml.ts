@@ -301,6 +301,11 @@ async function executeMappings(
     }
 
     let out = "";
+    if(targets) {
+        // Initialize data holders of every declared target
+        targets.forEach(t => t.data = "");
+    }
+
     for (let mappingFile of mappingLocations) {
         const t0 = new Date();
         console.log("[rmlMapper processor]", "Running", mappingFile);
@@ -317,9 +322,6 @@ async function executeMappings(
 
         if (targets) {
             for (let target of targets) {
-                if (!target.data) {
-                    target.data = "";
-                }
                 target.data += await readFile(target.newLocation, { encoding: "utf8" });
             }
         } else {
