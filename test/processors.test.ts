@@ -109,15 +109,15 @@ describe("Tests for RML-related processors", async () => {
                     js:lifeCycleConfig [
                         js:predicate <http://ex.org/lifeCycleProp>;
                         js:create [
-                            js:function <http://example.com/idlab/function/explicitCreate>;
+                            js:function <https://w3id.org/imec/idlab/function#explicitCreate>;
                             js:type <https://www.w3.org/ns/activitystreams#Create>
                         ];
                         js:update [
-                            js:function <http://example.com/idlab/function/implicitUpdate>;
+                            js:function <https://w3id.org/imec/idlab/function#implicitUpdate>;
                             js:type <https://www.w3.org/ns/activitystreams#Update>
                         ];
                         js:delete [
-                            js:function <http://example.com/idlab/function/implicitDelete>;
+                            js:function <https://w3id.org/imec/idlab/function#implicitDelete>;
                             js:type <https://www.w3.org/ns/activitystreams#Delete>
                         ]
                     ];

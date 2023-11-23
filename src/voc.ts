@@ -102,7 +102,7 @@ export const GREL = createUriAndTermNamespace(
 );
 
 export const IDLAB_FN = createUriAndTermNamespace(
-  "http://example.com/idlab/function/",
+  "https://w3id.org/imec/idlab/function#",
   "iri",
   "explicitCreate",
   "implicitUpdate",
