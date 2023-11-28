@@ -551,6 +551,28 @@ function generateTriplesMapQuads(
                 newTMQuads.push(quad(TM, RR.terms.predicateObjectMap, pom.object));
             });
         });
+    } else {
+        // Try to find and append the rdf:type predicate-object map for deletes
+        outer: for (const tm of triplesMaps) {
+            for (const pom of store.getObjects(tm, RR.predicateObjectMap, null)) {
+                const predVal = store.getObjects(pom, RR.predicate, null)[0];
+
+                // Account for rr:predicate and rr:PredicateMap
+                if (predVal) {
+                    newTMQuads.push(quad(TM, RR.terms.predicateObjectMap, pom));
+                    break outer;
+                } else {
+                    const pm = store.getObjects(pom, RR.predicateMap, null)[0];
+                    if (pm) {
+                        const pmVal = store.getObjects(pm, RR.constant, null)[0];
+                        if (pmVal) {
+                            newTMQuads.push(quad(TM, RR.terms.predicateObjectMap, pom));
+                            break outer;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return newTMQuads;

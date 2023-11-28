@@ -217,6 +217,7 @@ describe("Functional tests for the rml2incrml Connector Architecture function", 
         const mapping = `
             ${PREFIXES}
             ${TM(0, "dataset/data.xml", "http://ex.org/instances/{Property/@Value}", "<http://ex.org/myGraph>")};
+            ${POM("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", { pred: "rr:constant", obj: "<http://ex.org/ns/SomeClass>" })};
             ${POM("http://ex.org/ns/type", { pred: "rr:template", obj: "\"http://ex.org/instance/{AnotherProperty/@Value}\"" })};
             ${POM("http://ex.org/ns/someProperty", { pred: "rr:constant", obj: "\"Some Value\"" })}.
         `;
