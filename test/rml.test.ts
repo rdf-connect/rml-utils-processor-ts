@@ -248,6 +248,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         `;
         // Define function parameters
         const mappingReader = new SimpleStream<string>();
+        const defaultOutputStream = new SimpleStream<string>();
         const sourceInputStream = new SimpleStream<string>();
         const targetOutputStream = new SimpleStream<string>();
         const sources: Source[] = [
@@ -289,7 +290,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         });
 
         // Execute function
-        await rmlMapper(mappingReader, sources, targets, undefined, "/tmp/rmlMapper.jar");
+        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
 
         // Push mappings input data
         await mappingReader.push(rmlDoc);
@@ -306,6 +307,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         `;
         // Define function parameters
         const mappingReader = new SimpleStream<string>();
+        const defaultOutputStream = new SimpleStream<string>();
         const sourceInputStream = new SimpleStream<string>();
         const targetOutputStream = new SimpleStream<string>();
         const sources: Source[] = [
@@ -347,7 +349,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         });
 
         // Execute function
-        await rmlMapper(mappingReader, sources, targets, undefined, "/tmp/rmlMapper.jar");
+        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
 
         // Push mappings input data
         await mappingReader.push(rmlDoc);
@@ -364,6 +366,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         `;
         // Define function parameters
         const mappingReader = new SimpleStream<string>();
+        const defaultOutputStream = new SimpleStream<string>();
         const sourceInputStream = new SimpleStream<string>();
         const targetOutputStream = new SimpleStream<string>();
         const sources: Source[] = [
@@ -405,7 +408,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         });
 
         // Execute function
-        await rmlMapper(mappingReader, sources, targets, undefined, "/tmp/rmlMapper.jar");
+        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
 
         // Push raw input data first
         await sourceInputStream.push(LOCAL_RAW_DATA);
@@ -434,7 +437,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         });
 
         // Execute function
-        await rmlMapper(mappingReader, undefined, undefined, outputStream, "/tmp/rmlMapper.jar");
+        await rmlMapper(mappingReader, outputStream, undefined, undefined, "/tmp/rmlMapper.jar");
 
         // Push mappings input data
         await mappingReader.push(rmlDoc);
@@ -474,7 +477,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         });
 
         // Execute function
-        await rmlMapper(mappingReader, sources, undefined, outputStream, "/tmp/rmlMapper.jar");
+        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
 
         // Push raw input data first
         await sourceInputStream.push(LOCAL_RAW_DATA);
@@ -526,7 +529,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         });
 
         // Execute function
-        await rmlMapper(mappingReader, sources, undefined, outputStream, "/tmp/rmlMapper.jar");
+        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
 
         // Push mappings input data
         await mappingReader.push(rmlDoc);

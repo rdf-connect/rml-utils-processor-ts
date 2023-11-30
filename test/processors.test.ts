@@ -84,7 +84,7 @@ describe("Tests for RML-related processors", async () => {
         expect(argss.length).toBe(1);
         expect(argss[0].length).toBe(5);
 
-        const [[mappings, rmlSource, rmlTarget, output, rmlJar]] = argss;
+        const [[mappings, output, rmlSource, rmlTarget, rmlJar]] = argss;
 
         expect(rmlSource[0].location).toBe("dataset/data.xml");
         testReader(rmlSource[0].dataInput);

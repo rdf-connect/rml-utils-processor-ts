@@ -53,15 +53,15 @@ js:RMLMapperReader a js:JsProcess;
       fnom:implementationParameterPosition "0"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "sources";
+      fnom:functionParameter "defaultWriter";
       fnom:implementationParameterPosition "1"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "targets";
+      fnom:functionParameter "sources";
       fnom:implementationParameterPosition "2"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
-      fnom:functionParameter "defaultWriter";
+      fnom:functionParameter "targets";
       fnom:implementationParameterPosition "3"^^xsd:integer;
     ], [
       a fnom:PositionParameterMapping;
@@ -116,6 +116,12 @@ js:RMLMapperReader a js:JsProcess;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
+    sh:path js:output;
+    sh:name "defaultWriter";
+    sh:class :WriterChannel;
+    sh:minCount 1;
+    sh:maxCount 1;
+  ], [
     sh:path js:rmlSource;
     sh:name "sources";
     sh:class js:RmlSource;
@@ -125,12 +131,6 @@ js:RMLMapperReader a js:JsProcess;
     sh:name "targets";
     sh:class js:RmlTarget;
     sh:minCount 0;
-  ], [
-    sh:path js:output;
-    sh:name "defaultWriter";
-    sh:class :WriterChannel;
-    sh:minCount 0;
-    sh:maxCount 1;
   ], [
     sh:path js:rmlJar;
     sh:name "jarLocation";

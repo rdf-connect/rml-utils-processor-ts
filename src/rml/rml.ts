@@ -1,6 +1,6 @@
 import type { Stream, Writer } from "@ajuvercr/js-runner";
 import { exec } from "child_process";
-import { readFile, writeFile } from "fs/promises";
+import { access, constants, readFile, writeFile } from "fs/promises";
 import {
     DataFactory,
     Parser,
@@ -42,9 +42,9 @@ type SourceDataUpdate = {
 
 export async function rmlMapper(
     mappingReader: Stream<string>,
+    defaultWriter: Writer<string>,
     sources?: Source[],
     targets?: Target[],
-    defaultWriter?: Writer<string>,
     jarLocation?: string,
 ) {
     const uid = randomUUID();
@@ -115,9 +115,9 @@ export async function rmlMapper(
                                 mappingLocations,
                                 jarFile,
                                 outputFile,
+                                defaultWriter,
                                 sources,
-                                targets,
-                                defaultWriter
+                                targets
                             );
                             // Flag that mapping process is over
                             executing = false;
@@ -150,9 +150,9 @@ export async function rmlMapper(
                 mappingLocations,
                 jarFile,
                 outputFile,
+                defaultWriter,
                 sources,
-                targets,
-                defaultWriter
+                targets
             );
         }
     });
@@ -286,9 +286,9 @@ async function executeMappings(
     mappingLocations: string[],
     jarFile: string,
     outputFile: string,
+    defaultWriter: Writer<string>,
     sources?: Source[],
-    targets?: Target[],
-    defaultWriter?: Writer<string>
+    targets?: Target[]
 ) {
     if (sources) {
         for (let source of sources) {
@@ -322,7 +322,13 @@ async function executeMappings(
 
         if (targets) {
             for (let target of targets) {
-                target.data += await readFile(target.newLocation, { encoding: "utf8" });
+                try {
+                    await access(target.newLocation, constants.F_OK);
+                    target.data += await readFile(target.newLocation, { encoding: "utf8" });
+                } catch (err) {
+                    // Fallback to default output
+                    out += await readFile(outputFile, { encoding: "utf8" });
+                }
             }
         } else {
             out += await readFile(outputFile, { encoding: "utf8" });
@@ -335,7 +341,7 @@ async function executeMappings(
         targets.forEach(async target => {
             await target.writer.push(target.data);
         });
-    } else if (defaultWriter) {
+    } else if (out !== "") {
         await defaultWriter.push(out);
     }
 }
