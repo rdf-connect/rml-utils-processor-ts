@@ -10,7 +10,7 @@ This processor takes a stream of YARRRML mapping files as input and converts the
 
 ### [`js:RMLMapperReader`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L44)
 
-This processor executes RML mapping rules using the Java-based [RMLMapper engine](https://github.com/RMLio/rmlmapper-java). A mapping process can be defined within a Connector Architecture (CA) pipeline, by defining an input stream of RML mappings, which will be executed sequentially. A set of logical sources (`js:rmlSource`) and targets (`js:rmlTarget`) can be optionally declared to make them visible to the CA pipeline. Otherwise a default output (`js:output`) needs to be defined, pointing to a file where all produced RDF triples/quads will be collected.
+This processor executes RML mapping rules using the Java-based [RMLMapper engine](https://github.com/RMLio/rmlmapper-java). A mapping process can be defined within a Connector Architecture (CA) pipeline, by defining an input stream of RML mappings, which will be executed sequentially. A default writer channel (`js:output`) needs to be defined, where all produced RDF triples/quads will be streamed, from mappings that do not define explicit Logical Targets. A set of logical sources (`js:rmlSource`) and targets (`js:rmlTarget`) can be optionally declared to make them visible to the CA pipeline.
 
 Logical sources can be marked as trigger-based (`js:trigger`) to indicate that they will be updated in the future and therefore, triggering new mapping executions. Finally, a path (`js:rmlJar`) to a local RMLMapper can be given. An example definition of the processor is shown next:
 
@@ -19,6 +19,7 @@ Logical sources can be marked as trigger-based (`js:trigger`) to indicate that t
 @prefix js: <https://w3id.org/conn/js#>.
 
 [ ] a js:RMLMapperReader; 
+    js:output <outputWriterChannel>;
     js:rmlSource [
         js:sourceLocation "dataset/data.xml";
         js:input <fileChannelReader1>;
@@ -32,7 +33,6 @@ Logical sources can be marked as trigger-based (`js:trigger`) to indicate that t
         js:output <fileChannelWriter>
     ];
     js:mappings <jr>;
-    # js:output <jw>; # This parameter is only needed if no js:rmlTarget are defined
     js:rmlJar <./rmlmapper-6.3.0-r0-all.jar>.
 ```
 
