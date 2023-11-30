@@ -487,6 +487,69 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         await mappingReader.end();
     });
 
+    test("Mapping process with declared and undeclared logical sources and targets", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_TARGET}
+            ${RML_TM_REMOTE_SOURCE_AND_NO_TARGET}
+        `;
+
+        // Define function parameters
+        const mappingReader = new SimpleStream<string>();
+        const sourceInputStream = new SimpleStream<string>();
+        const outputStream = new SimpleStream<string>();
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                newLocation: "",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: false
+            }
+        ];
+
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                newLocation: "",
+                writer: outputStream, // Here we are using the same stream as the default output
+                data: ""
+            }
+        ];
+
+        // Check output
+        outputStream.data((data: string) => {
+            const store = new Store();
+            store.addQuads(new Parser().parse(data));
+            expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
+            expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
+            expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
+            expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
+            expect(store.getQuads(
+                "http://example.org/001",
+                RDF.type,
+                null,
+                "http://example.org/myNamedGraph").length
+            ).toBe(1);
+            expect(store.getQuads(
+                "http://example.org/002",
+                RDFS.label,
+                null,
+                "http://example.org/myNamedGraph").length
+            ).toBe(1);
+        });
+
+        // Execute function
+        await rmlMapper(mappingReader, outputStream, sources, targets, "/tmp/rmlMapper.jar");
+
+        // Push raw input data first
+        await sourceInputStream.push(LOCAL_RAW_DATA);
+
+        // Push mappings input data
+        await mappingReader.push(rmlDoc);
+        await mappingReader.end();
+    });
+
     test("Mapping process with async input updates", async () => {
         const rmlDoc = `
             ${PREFIXES}
