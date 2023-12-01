@@ -10,6 +10,7 @@ import {
     Store,
     Writer as N3Writer,
 } from "n3";
+import { createHash } from "crypto";
 import { randomUUID, getJarFile } from "../util";
 import { Cont, empty, match, pred, subject } from "rdf-lens";
 import { RDF } from "@treecg/types";
@@ -78,7 +79,9 @@ export async function rmlMapper(
         console.log("[rmlMapper processor]", "Got mapping input!");
         try {
             const newMapping = transformMapping(input, sources, targets);
-            const newLocation = `/tmp/rml-${uid}-mapping-${mappingLocations.length}.ttl`;
+            // Create a hash from the mapping content to avoid async overwriting
+            const hash = createHash("md5");
+            const newLocation = `/tmp/rml-${uid}-mapping-${hash.update(input).digest("hex")}.ttl`;
             await writeFile(newLocation, newMapping, { encoding: "utf8" });
             mappingLocations.push(newLocation);
             console.log("[rmlMapper processor]", "Added new mapping file location", newLocation);
