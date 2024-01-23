@@ -14,7 +14,7 @@ export async function getJarFile(mLocation: string | undefined): Promise<string>
   if (mLocation) {
     if (mLocation.startsWith("http")) {
       url = mLocation;
-      location = `./${mLocation.split("/")[mLocation.split("/").length - 1]}`;
+      location = `/tmp/${mLocation.split("/")[mLocation.split("/").length - 1]}`;
     } else {
       location = mLocation;
       url = DEFAULT_URL;
