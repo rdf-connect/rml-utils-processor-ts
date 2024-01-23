@@ -2,22 +2,34 @@ import { existsSync } from "fs";
 import { randomUUID as cryptoUUID } from "crypto";
 import { exec } from "child_process";
 
+const DEFAULT_URL = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.5.1/rmlmapper-6.5.1-r371-all.jar";
+const DEFAULT_LOCATION = "/tmp/rml-" + cryptoUUID() + ".jar";
 
-const defaultLocation = "/tmp/rml-" + cryptoUUID() + ".jar";
 let rmlJarPromise: undefined | Promise<string> = undefined;
 
-export async function getJarFile(mLocation: string | undefined, offline: boolean, url: string): Promise<string> {
-  const location = mLocation || defaultLocation;
+export async function getJarFile(mLocation: string | undefined): Promise<string> {
+  let location;
+  let url;
+
+  if (mLocation) {
+    if (mLocation.startsWith("http")) {
+      url = mLocation;
+      location = `./${mLocation.split("/")[mLocation.split("/").length - 1]}`;
+    } else {
+      location = mLocation;
+      url = DEFAULT_URL;
+    }
+  } else {
+    location = DEFAULT_LOCATION;
+    url = DEFAULT_URL;
+  }
 
   try {
     if (existsSync(location)) {
       return location;
     }
-  } catch (e: any) { }
-
-  // Did not find the file :/
-  if (offline) {
-    throw "Did not find jar file, and the runner is started in offline mode. Cannot continue.";
+  } catch (e: any) {
+    throw new Error(`Did not find given jar file ${location}`);
   }
 
   if (!rmlJarPromise) {

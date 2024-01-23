@@ -18,9 +18,6 @@ import { RML, RMLT, VOID } from "../voc";
 
 const { literal } = DataFactory;
 
-const RML_MAPPER_RELEASE =
-    "https://github.com/RMLio/rmlmapper-java/releases/download/v6.2.2/rmlmapper-6.2.2-r371-all.jar";
-
 export type Source = {
     location: string;
     dataInput: Stream<string>;
@@ -71,7 +68,7 @@ export async function rmlMapper(
         }
     }
 
-    const jarFile = await getJarFile(jarLocation, false, RML_MAPPER_RELEASE);
+    const jarFile = await getJarFile(jarLocation);
     const mappingLocations: string[] = [];
 
     // Read mapping input stream

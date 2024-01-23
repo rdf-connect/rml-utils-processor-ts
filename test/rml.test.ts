@@ -333,18 +333,24 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             const store = new Store();
             store.addQuads(new Parser().parse(data));
 
-            expect(store.getQuads(null, null, null, null).length).toBe(4);
+            expect(store.getQuads(null, null, null, null).length).toBe(8);
             expect(store.getQuads(
-                "http://example.org/001",
+                null,
                 RDF.type,
                 null,
                 "http://example.org/myNamedGraph").length
+            ).toBe(2);
+            expect(store.getQuads(
+                null,
+                "http://purl.org/dc/terms/isVersionOf",
+                "http://example.org/001",
+                null).length
             ).toBe(1);
             expect(store.getQuads(
-                "http://example.org/002",
-                RDFS.label,
                 null,
-                "http://example.org/myNamedGraph").length
+                "http://purl.org/dc/terms/isVersionOf",
+                "http://example.org/002",
+                null).length
             ).toBe(1);
         });
 
