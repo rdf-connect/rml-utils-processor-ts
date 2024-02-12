@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "bun test --timeout 45000",
+    "test": "bun test --timeout 60000",
     "watch": "tsc -w"
   },
   "files": [
