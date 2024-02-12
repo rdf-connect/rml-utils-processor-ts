@@ -131,12 +131,13 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ] .
     `;
 
-    const RML_TM_LOCAL_SOURCE_AND_NO_TARGET = `
+    const RML_TM_LOCAL_SOURCE_AND_NO_TARGET = (source?) => {
+        return `
         ex:map_test-mapping_000 a rr:TriplesMap ;
             rdfs:label "test-mapping" ;
             rml:logicalSource [
                 a rml:LogicalSource ;
-                rml:source "dataset/data.xml" ;
+                rml:source "${source || "dataset/data.xml"}" ;
                 rml:iterator "//data" ;
                 rml:referenceFormulation ql:XPath
             ] ;
@@ -173,6 +174,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
                 ]
             ] .
     `;
+    };
 
     const RML_TM_REMOTE_SOURCE_AND_NO_TARGET = `
         ex:map_test-mapping_001 a rr:TriplesMap ;
@@ -254,7 +256,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
-                newLocation: "",
                 dataInput: sourceInputStream,
                 hasData: false,
                 trigger: false
@@ -263,7 +264,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const targets: Target[] = [
             {
                 location: "file:///results/output.nq",
-                newLocation: "",
                 writer: targetOutputStream,
                 data: ""
             }
@@ -313,7 +313,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
-                newLocation: "",
                 dataInput: sourceInputStream,
                 hasData: false,
                 trigger: false
@@ -322,7 +321,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const targets: Target[] = [
             {
                 location: "file:///results/output.nq",
-                newLocation: "",
                 writer: targetOutputStream,
                 data: ""
             }
@@ -378,7 +376,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
-                newLocation: "",
                 dataInput: sourceInputStream,
                 hasData: false,
                 trigger: false
@@ -387,7 +384,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const targets: Target[] = [
             {
                 location: "file:///results/output.nq",
-                newLocation: "",
                 writer: targetOutputStream,
                 data: ""
             }
@@ -454,7 +450,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
     test("Mapping process with declared and undeclared logical sources", async () => {
         const rmlDoc = `
             ${PREFIXES}
-            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET}
+            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET()}
             ${RML_TM_REMOTE_SOURCE_AND_NO_TARGET}
         `;
 
@@ -465,7 +461,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
-                newLocation: "",
                 dataInput: sourceInputStream,
                 hasData: false,
                 trigger: false
@@ -507,7 +502,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
-                newLocation: "",
                 dataInput: sourceInputStream,
                 hasData: false,
                 trigger: false
@@ -517,7 +511,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const targets: Target[] = [
             {
                 location: "file:///results/output.nq",
-                newLocation: "",
                 writer: outputStream, // Here we are using the same stream as the default output
                 data: ""
             }
@@ -559,7 +552,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
     test("Mapping process with async input updates", async () => {
         const rmlDoc = `
             ${PREFIXES}
-            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET}
+            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET()}
         `;
         // Define function parameters
         const mappingReader = new SimpleStream<string>();
@@ -568,7 +561,6 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
-                newLocation: "",
                 dataInput: sourceInputStream,
                 hasData: false,
                 trigger: true
@@ -608,6 +600,74 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         sourceInputStream.push(LOCAL_RAW_DATA);
         await sleep(1000);
         await sourceInputStream.push(LOCAL_RAW_DATA_UPDATE);
+        await sleep(3000);
+    });
+
+    test("Mapping process with async input updates for multiple sources", async () => {
+        const rmlDoc1 = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET("dataset/data1.xml")}
+        `;
+        const rmlDoc2 = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET("dataset/data2.xml")}
+        `;
+        // Define function parameters
+        const mappingReader = new SimpleStream<string>();
+        const sourceInputStream1 = new SimpleStream<string>();
+        const sourceInputStream2 = new SimpleStream<string>();
+        const outputStream = new SimpleStream<string>();
+        const sources: Source[] = [
+            {
+                location: "dataset/data1.xml",
+                dataInput: sourceInputStream1,
+                hasData: false,
+                trigger: true
+            },
+            {
+                location: "dataset/data2.xml",
+                dataInput: sourceInputStream2,
+                hasData: false,
+                trigger: true
+            }
+        ];
+
+        // Check output
+        let first = true;
+        outputStream.data((data: string) => {
+            const store = new Store();
+            store.addQuads(new Parser().parse(data));
+
+            expect(store.getQuads(null, null, null, null).length).toBe(4);
+
+            if (first) {
+                first = false;
+                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                    .object.value).toBe("some data");
+                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                    .object.value).toBe("some other data");
+            } else {
+                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                    .object.value).toBe("some new data");
+                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                    .object.value).toBe("some other new data");
+            }
+        });
+
+        // Execute function
+        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
+
+        // Push mappings input data
+        await mappingReader.push(rmlDoc1);
+        await mappingReader.push(rmlDoc2);
+        await mappingReader.end();
+
+        // Asynchronously push data updates
+        sourceInputStream1.push(LOCAL_RAW_DATA);
+        sourceInputStream2.push(LOCAL_RAW_DATA);
+        await sleep(1000);
+        sourceInputStream1.push(LOCAL_RAW_DATA_UPDATE);
+        await sourceInputStream2.push(LOCAL_RAW_DATA_UPDATE);
         await sleep(3000);
     });
 });
