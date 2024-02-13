@@ -1,6 +1,6 @@
 {
   "name": "rml-mapper-processor-ts",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Typescript wrapper over the RML-related operations to be reused within the Connector Architecture",
   "type": "module",
   "scripts": {
