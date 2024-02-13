@@ -286,7 +286,7 @@ async function handleDataUpdate(
     const { source, data } = update;
     console.log("[rmlMapper processor]", "Got data for", source.location);
 
-    if (source.hasData && !mappingsReady) {
+    if (source.hasData) {
         // Mapping rules are still coming through or we already running a mapping process. 
         // Buffer this data update and process it when ready.
         if (!source.sourceBuffer) {
