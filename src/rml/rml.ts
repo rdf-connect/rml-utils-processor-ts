@@ -106,22 +106,31 @@ export async function rmlMapper(
             console.error(ex);
         }
     }).on("end", async () => {
+        console.log("[rmlMapper processor]", "Received all mapping rules!");
         // We assume mappings to be static and only proceed to execute them once we have them all
         mappingsReady = true;
         if (sources) {
-            for (const source of sources) {
-                // Process data that has already been pushed to the input stream
-                if (source.sourceBuffer && source.sourceBuffer.length > 0) {
-                    await handleDataUpdate(
-                        source.sourceBuffer.shift()!,
-                        mappingsReady,
-                        sources,
-                        targets,
-                        mappingLocations,
-                        jarFile,
-                        outputFile,
-                        defaultWriter
-                    );
+            if (sources.every(s => s.hasData)) {
+                // We made sure that all declared logical sources are present
+                console.log("[rmlMapper processor]", "Start mapping now (on end mappings event)");
+                await executeMappings(mappingLocations, jarFile, outputFile, defaultWriter, sources, targets);
+                // Check for buffered input updates
+                for (const source of sources) {
+                    if (source.sourceBuffer && source.sourceBuffer.length > 0) {
+                        const update = source.sourceBuffer.shift();
+                        if (update) {
+                            await handleDataUpdate(
+                                update, 
+                                mappingsReady, 
+                                sources, 
+                                targets, 
+                                mappingLocations, 
+                                jarFile, 
+                                outputFile, 
+                                defaultWriter
+                            );
+                        }
+                    }
                 }
             }
         } else {
@@ -277,9 +286,9 @@ async function handleDataUpdate(
     const { source, data } = update;
     console.log("[rmlMapper processor]", "Got data for", source.location);
 
-    if (!mappingsReady) {
+    if (source.hasData && !mappingsReady) {
         // Mapping rules are still coming through or we already running a mapping process. 
-        // Store this data update and process when ready.
+        // Buffer this data update and process it when ready.
         if (!source.sourceBuffer) {
             source.sourceBuffer = [];
         }
@@ -289,7 +298,7 @@ async function handleDataUpdate(
         source.hasData = true;
         await writeFile(source.newLocation!, data);
 
-        if (sources.every((x) => x.hasData)) {
+        if (mappingsReady && sources.every((x) => x.hasData)) {
             // We made sure that all declared logical sources are present
             console.log("[rmlMapper processor]", "Start mapping now");
             await executeMappings(
@@ -301,19 +310,19 @@ async function handleDataUpdate(
                 targets
             );
             // Process buffered input updates
-            if (source.sourceBuffer) {
-                while (source.sourceBuffer.length > 0) {
-                    const update = source.sourceBuffer.shift();
+            for (const src of sources) {
+                if (src.sourceBuffer && src.sourceBuffer.length > 0) {
+                    const update = src.sourceBuffer.shift();
                     if (update) {
                         console.log("[rmlMapper processor]", "Processing buffered input", update.source.location);
                         await handleDataUpdate(
-                            update,
-                            mappingsReady,
-                            sources,
-                            targets,
-                            mappingLocations,
-                            jarFile,
-                            outputFile,
+                            update, 
+                            mappingsReady, 
+                            sources, 
+                            targets, 
+                            mappingLocations, 
+                            jarFile, 
+                            outputFile, 
                             defaultWriter
                         );
                     }
