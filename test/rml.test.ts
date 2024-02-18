@@ -754,6 +754,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         sourceInputStream2.push(LOCAL_RAW_DATA);
         sourceInputStream1.push(LOCAL_RAW_DATA_UPDATE);
         await sourceInputStream2.push(LOCAL_RAW_DATA_UPDATE);
+        await sleep(3000);
     });
 });
 
