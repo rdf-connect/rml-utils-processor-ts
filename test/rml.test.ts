@@ -3,7 +3,7 @@ import { SimpleStream } from "@ajuvercr/js-runner";
 import { Parser, Store } from "n3";
 import { deleteAsync } from "del";
 import { rmlMapper, Source, Target } from "../src/rml/rml";
-import { RDF, RDFS } from "../src/voc";
+import { AS, RDF, RDFS } from "../src/voc";
 
 describe("Functional tests for the rmlMapper Connector Architecture function", () => {
     const PREFIXES = `
@@ -12,7 +12,10 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         @prefix rr: <http://www.w3.org/ns/r2rml#> .
         @prefix rml: <http://semweb.mmlab.be/ns/rml#> .
         @prefix rmlt: <http://semweb.mmlab.be/ns/rml-target#> .
+        @prefix fno: <https://w3id.org/function/ontology#> .
+        @prefix fnml: <http://semweb.mmlab.be/ns/fnml#> .
         @prefix ql: <http://semweb.mmlab.be/ns/ql#> .
+        @prefix idlab-fn: <https://w3id.org/imec/idlab/function#> .
         @prefix void: <http://rdfs.org/ns/void#> .
         @prefix formats: <http://www.w3.org/ns/formats/> .
         @prefix td: <https://www.w3.org/2019/wot/td#> .
@@ -21,6 +24,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         @prefix ldes: <https://w3id.org/ldes#> .
         @prefix dct: <http://purl.org/dc/terms/> .
         @prefix ex: <http://example.org/> .
+        @prefix as: <https://www.w3.org/ns/activitystreams#> .
     `;
 
     const RML_TM_LOCAL_SOURCE_AND_TARGET = (source?: string) => {
@@ -178,6 +182,120 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         `;
     };
 
+    const RML_TM_STATEFUL = `
+        ex:logical_source a rml:LogicalSource ;
+            rml:source "dataset/data.xml" ;
+            rml:iterator "//data" ;
+            rml:referenceFormulation ql:XPath .
+
+        ex:map_test-mapping_000 a rr:TriplesMap ;
+            rdfs:label "test-mapping-create" ;
+            rml:logicalSource ex:logical_source ;
+            rr:subjectMap [
+                fnml:functionValue [
+                    rr:predicateObjectMap [
+                        rr:predicate fno:executes ;
+                        rr:objectMap [ rr:constant idlab-fn:explicitCreate ]
+                    ] ;
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:iri ;
+                        rr:objectMap [ rr:template "http://example.org/{@id}" ]
+                    ];
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:state ;
+                        rr:objectMap [ rr:constant "/tmp/create_state"; rr:dataType xsd:string; ]
+                    ];
+                ];
+                rr:class <http://example.org/Entity>;
+            ];
+            rr:predicateObjectMap ex:pom_001 ;
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicate ex:lifeCycleType ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rr:constant as:Create ;
+                    rr:termType rr:IRI
+                ]
+            ] .
+
+            ex:map_test-mapping_001 a rr:TriplesMap ;
+            rdfs:label "test-mapping-update" ;
+            rml:logicalSource ex:logical_source ;
+            rr:subjectMap [
+                fnml:functionValue [
+                    rr:predicateObjectMap [
+                        rr:predicate fno:executes ;
+                        rr:objectMap [ rr:constant idlab-fn:implicitUpdate ]
+                    ] ;
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:iri ;
+                        rr:objectMap [ rr:template "http://example.org/{@id}" ]
+                    ];
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:watchedProperty ;
+                        rr:objectMap [ rml:reference "('prop0=' || @id || 'prop1=' || @label)" ]
+                    ];
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:state ;
+                        rr:objectMap [ rr:constant "/tmp/update_state"; rr:dataType xsd:string; ]
+                    ];
+                ];
+                rr:class <http://example.org/Entity>;
+            ];
+            rr:predicateObjectMap ex:pom_001 ;
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicate ex:lifeCycleType ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rr:constant as:Update ;
+                    rr:termType rr:IRI
+                ]
+            ] .
+        
+        ex:map_test-mapping_002 a rr:TriplesMap ;
+            rdfs:label "test-mapping-delete" ;
+            rml:logicalSource ex:logical_source ;
+            rr:subjectMap [
+                fnml:functionValue [
+                    rr:predicateObjectMap [
+                        rr:predicate fno:executes ;
+                        rr:objectMap [ rr:constant idlab-fn:implicitDelete ]
+                    ] ;
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:iri ;
+                        rr:objectMap [ rr:template "http://example.org/{@id}" ]
+                    ];
+                    rr:predicateObjectMap [
+                        rr:predicate idlab-fn:state ;
+                        rr:objectMap [ rr:constant "/tmp/delete_state"; rr:dataType xsd:string; ]
+                    ];
+                ];
+                rr:class <http://example.org/Entity>;
+            ];
+            rr:predicateObjectMap [
+                a rr:PredicateObjectMap ;
+                rr:predicate ex:lifeCycleType ;
+                rr:objectMap [
+                    a rr:ObjectMap ;
+                    rr:constant as:Delete ;
+                    rr:termType rr:IRI
+                ]
+            ] .
+
+        ex:pom_001 a rr:PredicateObjectMap ;
+            rr:predicateMap [
+                a rr:PredicateMap ;
+                rr:constant rdfs:label
+            ] ;
+            rr:objectMap [
+                a rr:ObjectMap ;
+                rml:reference "@label" ;
+                rr:termType rr:Literal
+            ] .
+    `;
+
     const RML_TM_REMOTE_SOURCE_AND_NO_TARGET = `
         ex:map_test-mapping_001 a rr:TriplesMap ;
         rdfs:label "test-mapping" ;
@@ -252,6 +370,20 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         </resource>
     `;
 
+    const LOCAL_SOURCE_1 = `
+        <resource source_id="S001">
+            <data source_id="S001" id="001" label="some data"></data>
+            <data source_id="S001" id="002" label="some other data"></data>
+        </resource>
+    `;
+
+    const LOCAL_SOURCE_2 = `
+        <resource source_id="S002">
+            <data source_id="S002" id="003" label="some data"></data>
+            <data source_id="S002" id="004" label="some other data"></data>
+        </resource>
+    `;
+
     test("Mapping process with declared logical source and target", async () => {
         const rmlDoc = `
             ${PREFIXES}
@@ -279,23 +411,26 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        targetOutputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
-
-            expect(store.getQuads(null, null, null, null).length).toBe(4);
-            expect(store.getQuads(
-                "http://example.org/001",
-                RDF.type,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
-            expect(store.getQuads(
-                "http://example.org/002",
-                RDFS.label,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
+        const mappingsPromise = new Promise<void>(resolve => {
+            targetOutputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
+    
+                expect(store.getQuads(null, null, null, null).length).toBe(4);
+                expect(store.getQuads(
+                    "http://example.org/001",
+                    RDF.type,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                expect(store.getQuads(
+                    "http://example.org/002",
+                    RDFS.label,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                resolve();
+            });
         });
 
         // Execute function
@@ -307,6 +442,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
 
         // Push raw input data
         await sourceInputStream.push(LOCAL_RAW_DATA);
+        await mappingsPromise;
     });
 
     test("Mapping process with declared logical source and LDES target", async () => {
@@ -336,29 +472,32 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        targetOutputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
-
-            expect(store.getQuads(null, null, null, null).length).toBe(8);
-            expect(store.getQuads(
-                null,
-                RDF.type,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(2);
-            expect(store.getQuads(
-                null,
-                "http://purl.org/dc/terms/isVersionOf",
-                "http://example.org/001",
-                null).length
-            ).toBe(1);
-            expect(store.getQuads(
-                null,
-                "http://purl.org/dc/terms/isVersionOf",
-                "http://example.org/002",
-                null).length
-            ).toBe(1);
+        const mappingsPromise = new Promise<void>(resolve => {
+            targetOutputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
+    
+                expect(store.getQuads(null, null, null, null).length).toBe(8);
+                expect(store.getQuads(
+                    null,
+                    RDF.type,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(2);
+                expect(store.getQuads(
+                    null,
+                    "http://purl.org/dc/terms/isVersionOf",
+                    "http://example.org/001",
+                    null).length
+                ).toBe(1);
+                expect(store.getQuads(
+                    null,
+                    "http://purl.org/dc/terms/isVersionOf",
+                    "http://example.org/002",
+                    null).length
+                ).toBe(1);
+                resolve();
+            });
         });
 
         // Execute function
@@ -370,6 +509,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
 
         // Push raw input data
         await sourceInputStream.push(LOCAL_RAW_DATA);
+        await mappingsPromise;
     });
 
     test("Mapping process with declared logical source data input arriving before mappings", async () => {
@@ -399,23 +539,26 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        targetOutputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+        const mappingsPromise = new Promise<void>(resolve => {
+            targetOutputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
 
-            expect(store.getQuads(null, null, null, null).length).toBe(4);
-            expect(store.getQuads(
-                "http://example.org/001",
-                RDF.type,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
-            expect(store.getQuads(
-                "http://example.org/002",
-                RDFS.label,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
+                expect(store.getQuads(null, null, null, null).length).toBe(4);
+                expect(store.getQuads(
+                    "http://example.org/001",
+                    RDF.type,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                expect(store.getQuads(
+                    "http://example.org/002",
+                    RDFS.label,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                resolve();
+            });
         });
 
         // Execute function
@@ -427,6 +570,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         // Push mappings input data
         await mappingReader.push(rmlDoc);
         await mappingReader.end();
+        await mappingsPromise;
     });
 
     test("Mapping process with multiple declared logical sources data input arriving before mappings", async () => {
@@ -467,23 +611,29 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        targetOutputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
-            expect(store.getQuads(null, null, null, null).length).toBe(4);
-            expect(store.getQuads(
-                "http://example.org/001",
-                RDF.type,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
-            expect(store.getQuads(
-                "http://example.org/002",
-                RDFS.label,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
-
+        let counter = 0;
+        const mappingsPromise = new Promise<void>(resolve => {
+            targetOutputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
+                expect(store.getQuads(null, null, null, null).length).toBe(4);
+                expect(store.getQuads(
+                    "http://example.org/001",
+                    RDF.type,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                expect(store.getQuads(
+                    "http://example.org/002",
+                    RDFS.label,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                counter++;
+                if (counter === 3) {
+                    resolve();
+                }
+            });
         });
 
         // Execute function
@@ -504,7 +654,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         // Finish pushing mappings input data
         await mappingReader.push(rmlDoc2);
         await mappingReader.end();
-        await sleep(3000);
+        await mappingsPromise;
     });
 
     test("Mapping process without any declared logical sources and using default output", async () => {
@@ -516,13 +666,16 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const mappingReader = new SimpleStream<string>();
         const outputStream = new SimpleStream<string>();
 
-        outputStream.data(data => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+        const mappingsPromise = new Promise<void>(resolve => {
+            outputStream.data(data => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
 
-            expect(store.getQuads(null, RDF.type, null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, RDF.type, null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
+                resolve();
+            });
         });
 
         // Execute function
@@ -531,7 +684,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         // Push mappings input data
         await mappingReader.push(rmlDoc);
         await mappingReader.end();
-
+        await mappingsPromise;
     });
 
     test("Mapping process with declared and undeclared logical sources", async () => {
@@ -555,13 +708,16 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        outputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
-            expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
+        const mappingsPromise = new Promise<void>(resolve => {
+            outputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
+                expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
+                resolve();
+            });
         });
 
         // Execute function
@@ -573,6 +729,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         // Push mappings input data
         await mappingReader.push(rmlDoc);
         await mappingReader.end();
+        await mappingsPromise;
     });
 
     test("Mapping process with declared and undeclared logical sources and targets", async () => {
@@ -604,25 +761,28 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        outputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
-            expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(
-                "http://example.org/001",
-                RDF.type,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
-            expect(store.getQuads(
-                "http://example.org/002",
-                RDFS.label,
-                null,
-                "http://example.org/myNamedGraph").length
-            ).toBe(1);
+        const mappingsPromise = new Promise<void>(resolve => {
+            outputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
+                expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
+                expect(store.getQuads(
+                    "http://example.org/001",
+                    RDF.type,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                expect(store.getQuads(
+                    "http://example.org/002",
+                    RDFS.label,
+                    null,
+                    "http://example.org/myNamedGraph").length
+                ).toBe(1);
+                resolve();
+            });
         });
 
         // Execute function
@@ -634,6 +794,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         // Push mappings input data
         await mappingReader.push(rmlDoc);
         await mappingReader.end();
+        await mappingsPromise;
     });
 
     test("Mapping process with async input updates", async () => {
@@ -656,24 +817,27 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
 
         // Check output
         let first = true;
-        outputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+        const mappingsPromise = new Promise<void>(resolve => {
+            outputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
 
-            expect(store.getQuads(null, null, null, null).length).toBe(4);
+                expect(store.getQuads(null, null, null, null).length).toBe(4);
 
-            if (first) {
-                first = false;
-                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                    .object.value).toBe("some data");
-                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                    .object.value).toBe("some other data");
-            } else {
-                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                    .object.value).toBe("some new data");
-                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                    .object.value).toBe("some other new data");
-            }
+                if (first) {
+                    first = false;
+                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                        .object.value).toBe("some data");
+                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                        .object.value).toBe("some other data");
+                } else {
+                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                        .object.value).toBe("some new data");
+                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                        .object.value).toBe("some other new data");
+                    resolve();
+                }
+            });
         });
 
         // Execute function
@@ -685,9 +849,8 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
 
         // Asynchronously push data updates
         sourceInputStream.push(LOCAL_RAW_DATA);
-        await sleep(1000);
         await sourceInputStream.push(LOCAL_RAW_DATA_UPDATE);
-        await sleep(3000);
+        await mappingsPromise;
     });
 
     test("Mapping process with async input updates for multiple sources", async () => {
@@ -720,25 +883,30 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         ];
 
         // Check output
-        let first = true;
-        outputStream.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+        let counter = 0;
+        const mappingsPromise = new Promise<void>(resolve => {
+            outputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
 
-            expect(store.getQuads(null, null, null, null).length).toBe(4);
+                expect(store.getQuads(null, null, null, null).length).toBe(4);
 
-            if (first) {
-                first = false;
-                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                    .object.value).toBe("some data");
-                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                    .object.value).toBe("some other data");
-            } else {
-                expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                    .object.value).toBe("some new data");
-                expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                    .object.value).toBe("some other new data");
-            }
+                if (counter === 0) {
+                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                        .object.value).toBe("some data");
+                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                        .object.value).toBe("some other data");
+                } else {
+                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                        .object.value).toBe("some new data");
+                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                        .object.value).toBe("some other new data");
+                }
+                counter++;
+                if (counter === 2) {
+                    resolve();
+                }
+            });
         });
 
         // Execute function
@@ -754,7 +922,71 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         sourceInputStream2.push(LOCAL_RAW_DATA);
         sourceInputStream1.push(LOCAL_RAW_DATA_UPDATE);
         await sourceInputStream2.push(LOCAL_RAW_DATA_UPDATE);
-        await sleep(3000);
+        await mappingsPromise;
+    });
+
+    test("Stateful mapping process with independent sources coming via the same logical source", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_STATEFUL}
+        `;
+        // Define function parameters
+        const mappingReader = new SimpleStream<string>();
+        const sourceInputStream = new SimpleStream<string>();
+        const outputStream = new SimpleStream<string>();
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: true,
+                incRMLStateIndex: "source_id=\"([^\"]+)\""
+            }
+        ];
+
+
+        let first = true;
+        // Check output
+        const mappingsPromise = new Promise<void>(resolve => {
+            outputStream.data((data: string) => {
+                const store = new Store();
+                store.addQuads(new Parser().parse(data));
+                if (first) {
+                    first = false;
+                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
+                        .object.value).toBe("some data");
+                    expect(store.getQuads("http://example.org/001", "http://example.org/lifeCycleType", null, null)[0]
+                        .object.value).toBe(AS.Create);
+                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
+                        .object.value).toBe("some other data");
+                    expect(store.getQuads("http://example.org/002", "http://example.org/lifeCycleType", null, null)[0]
+                        .object.value).toBe(AS.Create);
+                } else {
+                    expect(store.getQuads("http://example.org/003", RDFS.label, null, null)[0]
+                        .object.value).toBe("some data");
+                    expect(store.getQuads("http://example.org/003", "http://example.org/lifeCycleType", null, null)[0]
+                        .object.value).toBe(AS.Create);
+                    expect(store.getQuads("http://example.org/004", RDFS.label, null, null)[0]
+                        .object.value).toBe("some other data");
+                    expect(store.getQuads("http://example.org/004", "http://example.org/lifeCycleType", null, null)[0]
+                        .object.value).toBe(AS.Create);
+                    resolve();
+                }
+            });
+        });
+
+        // Execute function
+        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
+
+        // Push mappings
+        await mappingReader.push(rmlDoc);
+        await mappingReader.end();
+
+        // Push data for first source
+        await sourceInputStream.push(LOCAL_SOURCE_1);
+        // Push data for second source
+        await sourceInputStream.push(LOCAL_SOURCE_2);
+        await mappingsPromise;
     });
 });
 
@@ -764,5 +996,10 @@ function sleep(x: number): Promise<unknown> {
 
 afterAll(async () => {
     // Clean up temporal files
-    await deleteAsync(["/tmp/rml*"], { force: true });
+    await deleteAsync([
+        "/tmp/rml-*",
+        "/tmp/create_state*",
+        "/tmp/update_state*",
+        "/tmp/delete_state*"
+    ], { force: true });
 });

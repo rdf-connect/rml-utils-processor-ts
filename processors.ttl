@@ -89,6 +89,12 @@ js:RMLMapperReader a js:JsProcess;
     sh:datatype xsd:boolean;
     sh:name "trigger";
     sh:maxCount 1;
+  ], [
+    sh:path js:incRMLStateIndex;
+    sh:datatype xsd:string;
+    sh:name "incRMLStateIndex";
+    sh:minCount 0;
+    sh:maxCount 1;
   ].
 
 [ ] a sh:NodeShape;

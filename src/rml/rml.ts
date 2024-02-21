@@ -14,9 +14,9 @@ import { createHash } from "crypto";
 import { randomUUID, getJarFile } from "../util";
 import { Cont, empty, match, pred, subject } from "rdf-lens";
 import { RDF } from "@treecg/types";
-import { RML, RMLT, VOID } from "../voc";
+import { RML, RMLT, VOID, IDLAB_FN, RR } from "../voc";
 
-const { literal } = DataFactory;
+const { namedNode, literal } = DataFactory;
 
 type SourceDataUpdate = {
     source: Source,
@@ -28,6 +28,7 @@ export type Source = {
     dataInput: Stream<string>;
     hasData: boolean;
     trigger: boolean;
+    incRMLStateIndex?: string;
     newLocation?: string;
     sourceBuffer?: SourceDataUpdate[]
 };
@@ -62,8 +63,7 @@ export async function rmlMapper(
             source.hasData = false;
             source.trigger = !!source.trigger;
 
-            // Register data event handlers for each source 
-            // and make sure they are executed sequentially
+            // Register data event handlers for each source and make sure they are executed sequentially
             source.dataInput.data(async (data) => {
                 executing = executing.then(async () => {
                     await handleDataUpdate(
@@ -120,13 +120,13 @@ export async function rmlMapper(
                         const update = source.sourceBuffer.shift();
                         if (update) {
                             await handleDataUpdate(
-                                update, 
-                                mappingsReady, 
-                                sources, 
-                                targets, 
-                                mappingLocations, 
-                                jarFile, 
-                                outputFile, 
+                                update,
+                                mappingsReady,
+                                sources,
+                                targets,
+                                mappingLocations,
+                                jarFile,
+                                outputFile,
                                 defaultWriter
                             );
                         }
@@ -295,8 +295,79 @@ async function handleDataUpdate(
         console.log("[rmlMapper processor]", "Buffering input update until ready for next mapping run");
         source.sourceBuffer.push({ source, data });
     } else {
+        // Register that we have data available from this source
         source.hasData = true;
         await writeFile(source.newLocation!, data);
+
+        /**
+         * Hack to handle the case of having multiple, independent and stateful (i.e., IncRML) data sources, 
+         * coming via the same Logical Source and having implicit deletes. 
+         * 
+         * For example, as in the case of ERA, where the same mappings are applied on multiple 
+         * independent data sources (coming from each Infrastructure Manager (IM)) that complement each other,
+         * and over which a state needs to be maintained across mapping executions (IncRML).
+         * 
+         * This aims to avoid that state registers produce false Deletions.
+         * For example, when an update from IM_1 (e.g, France) 
+         * comes via the same Logical Source declaration as IM_2 (e.g, Belgium) did before, 
+         * and does not include any of the entities registered by the former,
+         * the stateful mappings will conclude erroneously that these were deleted.
+         * 
+         * Therefore, we extract a common identifier from the data that is shared by data updates 
+         * coming from the same source. We use a given regex expression 
+         * and proceed to adjust the idlab-fn:state value of all stateful functions in all mappings,
+         * to keep a dedicated state per source publisher. 
+         */
+
+        if (source.incRMLStateIndex) {
+            // Get data source's identifier from configured regex expression
+            const sourceId = data.match(source.incRMLStateIndex);
+            if (sourceId) {
+                for (const mapLoc of mappingLocations) {
+                    // Load mapping quads
+                    const store = new Store(new Parser().parse(await readFile(mapLoc, "utf8")));
+
+                    // Find state path predicate-object map
+                    const poms = store.getSubjects(RR.predicate, IDLAB_FN.state, null);
+
+                    for (const pom of poms) {
+                        // Get state path object map
+                        const om = store.getObjects(pom, RR.objectMap, null)[0];
+                        // Get the original state path and adjust it to become unique for the current data source
+                        const originalStatePath = store.getObjects(om, RR.constant, null)[0];
+
+                        // Delete original's state path triple
+                        store.removeQuad(
+                            <Quad_Subject>om,
+                            <Quad_Predicate>namedNode(RR.constant),
+                            <Quad_Object>originalStatePath,
+                        );
+                        // Add new adjusted state path triple
+                        let newPath;
+                        // This makes the assumption that the original state path name was created with
+                        // the IncRML transformer and thus always has a structure "{hash}_{event type}_state".
+                        if(originalStatePath.value.endsWith("state")) {
+                            newPath = `${originalStatePath.value}_${sourceId[1]}`;
+                        } else {
+                            const parts = originalStatePath.value.split("_");
+                            parts.splice(-1);
+                            newPath = `${parts.join("_")}_${sourceId[1]}`;
+                        }
+                        store.addQuad(
+                            <Quad_Subject>om,
+                            <Quad_Predicate>namedNode(RR.constant),
+                            <Quad_Object>literal(newPath)
+                        );
+                    }
+
+                    // Write back the mapping to disk
+                    const newMap = new N3Writer().quadsToString(store.getQuads(null, null, null, null));
+                    await writeFile(mapLoc, newMap, "utf8");
+                }
+            } else {
+                throw new Error(`No Regex-based identifier found on data source ${source.location}`);
+            }
+        }
 
         if (mappingsReady && sources.every((x) => x.hasData)) {
             // We made sure that all declared logical sources are present
@@ -316,13 +387,13 @@ async function handleDataUpdate(
                     if (update) {
                         console.log("[rmlMapper processor]", "Processing buffered input", update.source.location);
                         await handleDataUpdate(
-                            update, 
-                            mappingsReady, 
-                            sources, 
-                            targets, 
-                            mappingLocations, 
-                            jarFile, 
-                            outputFile, 
+                            update,
+                            mappingsReady,
+                            sources,
+                            targets,
+                            mappingLocations,
+                            jarFile,
+                            outputFile,
                             defaultWriter
                         );
                     }
@@ -410,5 +481,3 @@ async function executeMappings(
         await defaultWriter.push(out);
     }
 }
-
-

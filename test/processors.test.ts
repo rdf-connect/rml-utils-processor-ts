@@ -58,7 +58,8 @@ describe("Tests for RML-related processors", async () => {
                 js:rmlSource [
                     js:sourceLocation "dataset/data.xml";
                     js:input <jr>;
-                    js:trigger true
+                    js:trigger true;
+                    js:incRMLStateIndex "source_id=\\\"([^\\\"]+)\\\""
                 ];
                 js:rmlTarget [
                     js:targetLocation "dataset/output.nt";
@@ -89,6 +90,7 @@ describe("Tests for RML-related processors", async () => {
         expect(rmlSource[0].location).toBe("dataset/data.xml");
         testReader(rmlSource[0].dataInput);
         expect(rmlSource[0].trigger).toBeTruthy();
+        expect(rmlSource[0].incRMLStateIndex).toBe("source_id=\"([^\"]+)\"");
 
         expect(rmlTarget[0].location).toBe("dataset/output.nt");
         testWriter(rmlTarget[0].writer);
