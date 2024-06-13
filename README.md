@@ -1,6 +1,6 @@
 # rml-utils-processor-ts
 
-[![Bun CI](https://github.com/julianrojas87/rml-utils-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/julianrojas87/rml-utils-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/rml-utils-processor-ts.svg?style=popout)](https://npmjs.com/package/rdfc@rml-utils-processor-ts)
+[![Bun CI](https://github.com/julianrojas87/rml-utils-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/julianrojas87/rml-utils-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/rml-utils-processor-ts.svg?style=popout)](https://npmjs.com/package/@rdfc/rml-utils-processor-ts)
 
 Collection of Typescript utilities around RML (RDF Mapping Language) tools that includes a wrapper over the RML Mapper to be reused within the [RDF-Connect](https://rdf-connect.github.io/rdfc.github.io/) ecosystem  Currently this repository exposes 3 processors:
 
