@@ -1,4 +1,4 @@
-import type { Stream, Writer } from "@ajuvercr/js-runner";
+import type { Stream, Writer } from "@rdfc/js-runner";
 import Y2R from '@rmlio/yarrrml-parser/lib/rml-generator';
 import { Writer as RDFWriter } from 'n3';
 

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "@jest/globals";
-import { SimpleStream } from "@ajuvercr/js-runner";
+import { SimpleStream } from "@rdfc/js-runner";
 import { Parser, Store, DataFactory, Quad, OTerm } from "n3";
 import { RDF, RR, RML, RMLT, IDLAB_FN, AS, FNML, FNO, GREL } from "../src/voc";
 import { BASE, rml2incrml, IncRMLConfig } from "../src/rml/incrml";

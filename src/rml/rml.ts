@@ -1,4 +1,4 @@
-import type { Stream, Writer } from "@ajuvercr/js-runner";
+import type { Stream, Writer } from "@rdfc/js-runner";
 import { exec } from "child_process";
 import { access, constants, readFile, unlink, writeFile } from "fs/promises";
 import {

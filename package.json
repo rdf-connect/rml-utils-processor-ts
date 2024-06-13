@@ -24,18 +24,18 @@
   "license": "MIT",
   "dependencies": {
     "@rdfjs/types": "^1.1.0",
-    "@rmlio/yarrrml-parser": "^1.6.1",
-    "@treecg/types": "^0.4.5",
-    "n3": "^1.17.2",
-    "rdf-lens": "^0.0.4"
+    "@rmlio/yarrrml-parser": "^1.6.2",
+    "@treecg/types": "^0.4.6",
+    "n3": "^1.17.3",
+    "rdf-lens": "^1.2.8"
   },
   "devDependencies": {
-    "@ajuvercr/js-runner": "^0.1.12",
+    "@rdfc/js-runner": "^0.2.1",
     "@jest/globals": "^29.7.0",
-    "@types/n3": "^1.16.3",
-    "@types/node": "^20.8.10",
+    "@types/n3": "^1.16.4",
+    "@types/node": "^20.14.2",
     "del": "^7.1.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
   }
 }

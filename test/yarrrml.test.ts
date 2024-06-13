@@ -1,5 +1,5 @@
 import { describe, test, expect } from "@jest/globals";
-import { SimpleStream } from "@ajuvercr/js-runner";
+import { SimpleStream } from "@rdfc/js-runner";
 import { yarrrml2rml } from "../src/yarrrml/yarrrml";
 import { Parser, Store } from "n3";
 import { RDF, RML, RR } from "../src/voc";

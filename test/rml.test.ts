@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from "@jest/globals";
-import { SimpleStream } from "@ajuvercr/js-runner";
+import { SimpleStream } from "@rdfc/js-runner";
 import { Parser, Store } from "n3";
 import { deleteAsync } from "del";
 import { rmlMapper, Source, Target } from "../src/rml/rml";

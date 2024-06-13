@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { randomUUID as cryptoUUID } from "crypto";
 import { exec } from "child_process";
 
-const DEFAULT_URL = "https://github.com/RMLio/rmlmapper-java/releases/download/v6.5.1/rmlmapper-6.5.1-r371-all.jar";
+const DEFAULT_URL = "https://github.com/RMLio/rmlmapper-java/releases/download/v7.0.0/rmlmapper-7.0.0-r374-all.jar";
 const DEFAULT_LOCATION = "/tmp/rml-" + cryptoUUID() + ".jar";
 
 let rmlJarPromise: undefined | Promise<string> = undefined;

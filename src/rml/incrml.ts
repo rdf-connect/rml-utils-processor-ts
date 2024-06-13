@@ -1,4 +1,4 @@
-import type { Stream, Writer } from "@ajuvercr/js-runner";
+import type { Stream, Writer } from "@rdfc/js-runner";
 import { createHash } from "crypto";
 import {
     Quad,
