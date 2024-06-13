@@ -1,7 +1,7 @@
 {
-  "name": "rml-mapper-processor-ts",
+  "name": "@rdfc/rml-utils-processor-ts",
   "version": "0.6.3",
-  "description": "Typescript wrapper over the RML-related operations to be reused within the Connector Architecture",
+  "description": "Collection of Typescript utilities around RML tools to be reused within the RDF-Connect ecosystem",
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -15,7 +15,7 @@
   ],
   "keywords": [
     "RML",
-    "Connector Architecture"
+    "RDF-Connect"
   ],
   "author": "Arthur Vercruysse",
   "contributors": [

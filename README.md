@@ -1,16 +1,16 @@
-# rml-mapper-processor-ts
+# rml-utils-processor-ts
 
-[![Bun CI](https://github.com/julianrojas87/rml-mapper-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/julianrojas87/rml-mapper-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/rml-mapper-processor-ts.svg?style=popout)](https://npmjs.com/package/rml-mapper-processor-ts)
+[![Bun CI](https://github.com/julianrojas87/rml-utils-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/julianrojas87/rml-utils-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/rml-utils-processor-ts.svg?style=popout)](https://npmjs.com/package/rdfc@rml-utils-processor-ts)
 
-Typescript wrappers over the RML-related operations to be reused within the [Connector Architecture](hhttps://the-connector-architecture.github.io/site/docs/1_Home). Currently this repository exposes 3 functions:
+Collection of Typescript utilities around RML (RDF Mapping Language) tools that includes a wrapper over the RML Mapper to be reused within the [RDF-Connect](https://rdf-connect.github.io/rdfc.github.io/) ecosystem  Currently this repository exposes 3 processors:
 
-### [`js:Y2R`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L9)
+### [`js:Y2R`](https://github.com/julianrojas87/rml-utils-processor-ts/blob/main/processors.ttl#L9)
 
 This processor takes a stream of YARRRML mapping files as input and converts them to their correspondent representation in RML quads. It relies on the [`yarrrml-parser`](https://github.com/RMLio/yarrrml-parser) library for executing the transformation.
 
-### [`js:RMLMapperReader`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L44)
+### [`js:RMLMapperReader`](https://github.com/julianrojas87/rml-utils-processor-ts/blob/main/processors.ttl#L44)
 
-This processor executes RML mapping rules using the Java-based [RMLMapper engine](https://github.com/RMLio/rmlmapper-java). A mapping process can be defined within a Connector Architecture (CA) pipeline, by defining an input stream of RML mappings, which will be executed sequentially. A default writer channel (`js:output`) needs to be defined, where all produced RDF triples/quads will be streamed, from mappings that do not define explicit Logical Targets. A set of logical sources (`js:rmlSource`) and targets (`js:rmlTarget`) can be optionally declared to make them visible to the CA pipeline.
+This processor executes RML mapping rules using the Java-based [RMLMapper engine](https://github.com/RMLio/rmlmapper-java). A mapping process can be defined within a RDF-Connect (RDF-C) pipeline, by defining an input stream of RML mappings, which will be executed sequentially. A default writer channel (`js:output`) needs to be defined, where all produced RDF triples/quads will be streamed, from mappings that do not define explicit Logical Targets. A set of logical sources (`js:rmlSource`) and targets (`js:rmlTarget`) can be optionally declared to make them visible to the RDF-C pipeline.
 
 Logical sources can be marked as trigger-based (`js:trigger`) to indicate that they will be updated in the future and therefore, triggering new mapping executions. Finally, a path (`js:rmlJar`) to a local RMLMapper can be given. An example definition of the processor is shown next:
 
@@ -36,13 +36,13 @@ Logical sources can be marked as trigger-based (`js:trigger`) to indicate that t
     js:rmlJar <./rmlmapper-6.3.0-r0-all.jar>.
 ```
 
-### [`js:IncRMLTransformer`](https://github.com/julianrojas87/rml-mapper-processor-ts/blob/main/processors.ttl#L142)
+### [`js:IncRMLTransformer`](https://github.com/julianrojas87/rml-utils-processor-ts/blob/main/processors.ttl#L142)
 
 This processor transforms a given stream of RML mapping documents to their correspondent Incremental RML (IncRML) representation. Concretely, this means that every defined `rr:TriplesMap` (that has at least 1 defined `rr:predicateObjectMap`) is further expanded into 3 new `rr:TriplesMap`s, each one dedicated to handle entity `create`, `update` and `delete` events. The processor will merge Triple Maps that produce the same Subject IRI, use the same Logical Source and belong to the same Named Graph (if any).
 
 An optional configuration can be given to produce unique IRIs (timestamp-based) by defining a LDES Logical Target. However, when dealing with multiple mapping documents, it is assumed that all Triples Maps related to an entity will be present in the same document. Otherwise multiple unique IRIs will be produced for subject triples that belong to the same entity.
 
-This processor can be used within a CA pipeline as follows:
+This processor can be used within a RDF-C pipeline as follows:
 
 ```turtle
 @prefix : <https://w3id.org/conn#>.
