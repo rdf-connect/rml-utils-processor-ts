@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "declaration": true,
     "outDir": "lib/",
     "lib": ["ES2022"],
     "target": "ES2022",
@@ -20,6 +21,10 @@
   "ts-node": {
     "esm": true,
     "experimentalSpecifierResolution": "node"
+  },
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "verbose": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules/**/*"]

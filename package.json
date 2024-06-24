@@ -4,7 +4,7 @@
   "description": "Collection of Typescript utilities around RML tools to be reused within the RDF-Connect ecosystem",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "prepublishOnly": "npm run build",
     "test": "bun test --timeout 60000",
     "watch": "tsc -w"
@@ -30,12 +30,13 @@
     "rdf-lens": "^1.2.8"
   },
   "devDependencies": {
-    "@rdfc/js-runner": "^0.2.1",
     "@jest/globals": "^29.7.0",
+    "@rdfc/js-runner": "^0.2.1",
     "@types/n3": "^1.16.4",
     "@types/node": "^20.14.2",
     "del": "^7.1.0",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.10",
     "typescript": "^5.4.5"
   }
 }

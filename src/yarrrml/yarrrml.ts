@@ -1,5 +1,5 @@
 import type { Stream, Writer } from "@rdfc/js-runner";
-import Y2R from '@rmlio/yarrrml-parser/lib/rml-generator';
+import Y2R from '@rmlio/yarrrml-parser/lib/rml-generator.js';
 import { Writer as RDFWriter } from 'n3';
 
 export function yarrrml2rml(reader: Stream<string>, writer: Writer<string>) {
