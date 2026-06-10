@@ -1,10 +1,28 @@
-import { describe, test, expect } from "@jest/globals";
-import { SimpleStream } from "@rdfc/js-runner";
-import { yarrrml2rml } from "../src/yarrrml/yarrrml";
+import { describe, test, expect } from "vitest";
+import { FullProc, Reader } from "@rdfc/js-runner";
+import { Yarrrml2RML } from "../src/yarrrml/yarrrml";
+import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
 import { Parser, Store } from "n3";
 import { RDF, RML, RR } from "../src/voc";
+import { createLogger, transports } from "winston";
 
-describe("Functional tests for the yarrrml2rml Connector Architecture function", () => {
+const logger = createLogger({
+    transports: new transports.Console({
+        level: "debug",
+    }),
+});
+
+async function strings(reader: Reader) {
+    const out: string[] = [];
+
+    for await (const st of reader.strings()) {
+        out.push(st);
+    }
+
+    return out;
+}
+
+describe("Functional tests for the Yarrrml2RML processor", () => {
     const yarrrmlDoc = `
         prefixes: 
             ex: "http://example.org/"
@@ -22,26 +40,36 @@ describe("Functional tests for the yarrrml2rml Connector Architecture function",
     `;
 
     test("Given a YARRRML document it produces RML triples", async () => {
-        const reader = new SimpleStream<string>();
-        const writer = new SimpleStream<string>();
+        const runner = createRunner();
+        const [yarrrmlInput, reader] = channel(runner, "input");
+        const [writer, rmlOutput] = channel(runner, "output");
 
-        writer.data((data: string) => {
-            const store = new Store();
-            store.addQuads(new Parser().parse(data));
+        const rml = strings(rmlOutput);
 
-            // Check that we got RML triples
-            expect(store.getQuads(null, RDF.type, RML.LogicalSource, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, RDF.type, RR.TriplesMap, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, RDF.type, RR.SubjectMap, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, RDF.type, RR.PredicateObjectMap, null).length).toBeGreaterThan(0);
-            expect(store.getQuads(null, RDF.type, RR.GraphMap, null).length).toBeGreaterThan(0);
-        });
+        const proc = <FullProc<Yarrrml2RML>>new Yarrrml2RML(
+            {
+                reader,
+                writer
+            },
+            logger
+        );
 
-        // Execute function
-        yarrrml2rml(reader, writer);
+        await proc.init();
 
-        // Push some data to the input stream
-        await reader.push(yarrrmlDoc);
-        await reader.end();
+        const transformPromise = proc.transform();
+
+        await yarrrmlInput.string(yarrrmlDoc);
+        await yarrrmlInput.close();
+        await transformPromise;
+
+        const store = new Store();
+        store.addQuads(new Parser().parse((await rml)[0]));
+
+        // Check that we got RML triples
+        expect(store.getQuads(null, RDF.type, RML.LogicalSource, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, RDF.type, RR.TriplesMap, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, RDF.type, RR.SubjectMap, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, RDF.type, RR.PredicateObjectMap, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, RDF.type, RR.GraphMap, null).length).toBeGreaterThan(0);
     });
 });

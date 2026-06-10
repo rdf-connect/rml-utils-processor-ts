@@ -1,96 +1,64 @@
-@prefix js: <https://w3id.org/conn/js#>.
-@prefix fno: <https://w3id.org/function/ontology#>.
-@prefix fnom: <https://w3id.org/function/vocabulary/mapping#>.
+@prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix : <https://w3id.org/conn#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
 @prefix dc: <http://purl.org/dc/terms/>.
 
-js:Y2R a js:JsProcess;
+rdfc:Yarrrml2RML a owl:Class, rdfs:Class;
   dc:title "yarrrml processor";
   dc:description "The YARRRML processor transforms YARRRML documents into RML mapping documents.";
-  js:file <./lib/yarrrml/yarrrml.js>;
-  js:function "yarrrml2rml";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "Data input channel";
-      fnom:implementationParameterPosition "0"^^xsd:int;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "Data output channel";
-      fnom:implementationParameterPosition "1"^^xsd:int;
-    ];
-  ].
+  rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./lib/yarrrml/yarrrml.js>;
+  rdfc:class "Yarrrml2RML";
+  rdfc:entrypoint <./>.
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:Y2R;
+  sh:targetClass rdfc:Yarrrml2RML;
   sh:property [
-    sh:class :ReaderChannel;
-    sh:path js:input;
+    sh:class rdfc:Reader;
+    sh:path rdfc:input;
     sh:maxCount 1;
     sh:minCount 1;
-    sh:name "Data input channel";
+    sh:name "reader";
   ], [
-    sh:class :WriterChannel;
-    sh:path js:output;
+    sh:class rdfc:Writer;
+    sh:path rdfc:output;
     sh:maxCount 1;
     sh:minCount 1;
-    sh:name "Data output channel";
+    sh:name "writer";
   ].
 
-js:RMLMapperReader a js:JsProcess;
-  js:file <./lib/rml/rml.js>;
-  js:function "rmlMapper";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "mappingInput";
-      fnom:implementationParameterPosition "0"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "defaultWriter";
-      fnom:implementationParameterPosition "1"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "sources";
-      fnom:implementationParameterPosition "2"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "targets";
-      fnom:implementationParameterPosition "3"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "jarLocation";
-      fnom:implementationParameterPosition "4"^^xsd:integer;
-    ];
-  ].
+rdfc:RMLMapperJS a owl:Class, rdfs:Class;
+  dc:title "RMLMapperJS processor";
+  dc:description "The RMLMapperJS processor wraps the Java RMLMapper to produce RDF data based on RML mappings.";
+  rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./lib/rml/rml.js>;
+  rdfc:class "RMLMapperJS";
+  rdfc:entrypoint <./>.
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:RmlSource;
+  sh:targetClass rdfc:RmlSource;
   sh:property [
-    sh:path js:sourceLocation;
+    sh:path rdfc:sourceLocation;
     sh:datatype xsd:string;
     sh:name "location";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
-    sh:path js:input;
-    sh:class :ReaderChannel;
+    sh:path rdfc:input;
+    sh:class rdfc:Reader;
     sh:name "dataInput";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
-    sh:path js:trigger;
+    sh:path rdfc:trigger;
     sh:datatype xsd:boolean;
     sh:name "trigger";
     sh:maxCount 1;
   ], [
-    sh:path js:incRMLStateIndex;
+    sh:path rdfc:incRMLStateIndex;
     sh:datatype xsd:string;
     sh:name "incRMLStateIndex";
     sh:minCount 0;
@@ -98,156 +66,143 @@ js:RMLMapperReader a js:JsProcess;
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:RmlTarget;
+  sh:targetClass rdfc:RmlTarget;
   sh:property [
-    sh:path js:targetLocation;
+    sh:path rdfc:targetLocation;
     sh:datatype xsd:string;
     sh:name "location";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
-    sh:path js:output;
-    sh:class :WriterChannel;
+    sh:path rdfc:output;
+    sh:class rdfc:Writer;
     sh:name "writer";
     sh:maxCount 1;
     sh:minCount 1;
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:RMLMapperReader;
+  sh:targetClass rdfc:RMLMapperJS;
   sh:property [
-    sh:path js:mappings;
+    sh:path rdfc:mappings;
     sh:name "mappingInput";
-    sh:class :ReaderChannel;
+    sh:class rdfc:Reader;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
-    sh:path js:output;
+    sh:path rdfc:output;
     sh:name "defaultWriter";
-    sh:class :WriterChannel;
+    sh:class rdfc:Writer;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
-    sh:path js:rmlSource;
+    sh:path rdfc:rmlSource;
     sh:name "sources";
-    sh:class js:RmlSource;
+    sh:class rdfc:RmlSource;
     sh:minCount 0;
   ], [
-    sh:path js:rmlTarget;
+    sh:path rdfc:rmlTarget;
     sh:name "targets";
-    sh:class js:RmlTarget;
+    sh:class rdfc:RmlTarget;
     sh:minCount 0;
   ], [
-    sh:path js:rmlJar;
+    sh:path rdfc:rmlJar;
     sh:name "jarLocation";
     sh:datatype xsd:string;
     sh:minCount 0;
     sh:maxCount 1;
   ].
 
-js:IncRMLTransformer a js:JsProcess;
-  js:file <./lib/rml/incrml.js>;
-  js:function "rml2incrml";
-  js:location <./>;
-  js:mapping [
-    a fno:Mapping;
-    fno:parameterMapping [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "rmlStream";
-      fnom:implementationParameterPosition "0"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "config";
-      fnom:implementationParameterPosition "1"^^xsd:integer;
-    ], [
-      a fnom:PositionParameterMapping;
-      fnom:functionParameter "incrmlStream";
-      fnom:implementationParameterPosition "2"^^xsd:integer;
-    ];
-  ].
+rdfc:IncRMLTransformer a rdfc:Processor;
+  dc:title "Incremental RML processor";
+  dc:description "The Incremental RML processor transforms a stream of RML mapping documents into corresponding Incremental RML documents.";
+  rdfc:jsImplementationOf rdfc:Processor;
+  rdfc:file <./lib/rml/incrml.js>;
+  rdfc:class "RML2IncRML";
+  rdfc:entrypoint <./>.
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:IncRMLTransformer;
+  sh:targetClass rdfc:IncRMLTransformer;
   sh:property [
-    sh:path js:rmlStream;
+    sh:path rdfc:rmlStream;
     sh:name "rmlStream";
-    sh:class :ReaderChannel;
+    sh:class rdfc:Reader;
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:config;
+    sh:path rdfc:config;
     sh:name "config";
-    sh:class js:IncRMLConfig;
+    sh:class rdfc:IncRMLConfig;
     sh:minCount 1;
-    sh:maxCount 1
+    sh:maxCount 1;
   ], [
-    sh:path js:incrmlStream;
+    sh:path rdfc:incrmlStream;
     sh:name "incrmlStream";
-    sh:class :WriterChannel;
+    sh:class rdfc:Writer;
     sh:minCount 1;
     sh:maxCount 1
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:IncRMLConfig;
+  sh:targetClass rdfc:IncRMLConfig;
   sh:property [
-    sh:path js:stateBasePath;
+    sh:path rdfc:stateBasePath;
     sh:datatype xsd:string;
     sh:name "stateBasePath";
     sh:maxCount 1;
     sh:minCount 1
   ], [
-    sh:path js:lifeCycleConfig;
-    sh:class js:LifeCycleConfig;
+    sh:path rdfc:lifeCycleConfig;
+    sh:class rdfc:LifeCycleConfig;
     sh:name "lifeCycleConfig";
     sh:maxCount 1;
     sh:minCount 1
   ], [
-    sh:path js:targetConfig;
-    sh:class js:LDESTargetConfig;
+    sh:path rdfc:targetConfig;
+    sh:class rdfc:LDESTargetConfig;
     sh:name "targetConfig";
     sh:minCount 0;
     sh:maxCount 1
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:LifeCycleConfig;
+  sh:targetClass rdfc:LifeCycleConfig;
   sh:property [
-    sh:path js:predicate;
+    sh:path rdfc:predicate;
     sh:datatype xsd:string;
     sh:name "predicate";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:create;
-    sh:class js:EventConfig;
+    sh:path rdfc:create;
+    sh:class rdfc:EventConfig;
     sh:name "create";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:update;
-    sh:class js:EventConfig;
+    sh:path rdfc:update;
+    sh:class rdfc:EventConfig;
     sh:name "update";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:delete;
-    sh:class js:EventConfig;
+    sh:path rdfc:delete;
+    sh:class rdfc:EventConfig;
     sh:name "delete";
     sh:minCount 1;
     sh:maxCount 1
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:EventConfig;
+  sh:targetClass rdfc:EventConfig;
   sh:property [
-    sh:path js:function;
+    sh:path rdfc:function;
     sh:datatype xsd:string;
     sh:name "function";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:type;
+    sh:path rdfc:type;
     sh:datatype xsd:string;
     sh:name "type";
     sh:minCount 1;
@@ -255,45 +210,45 @@ js:IncRMLTransformer a js:JsProcess;
   ].
 
 [ ] a sh:NodeShape;
-  sh:targetClass js:LDESTargetConfig;
+  sh:targetClass rdfc:LDESTargetConfig;
   sh:property [
-    sh:path js:targetPath;
+    sh:path rdfc:targetPath;
     sh:datatype xsd:string;
     sh:name "targetPath";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:timestampPath;
+    sh:path rdfc:timestampPath;
     sh:datatype xsd:string;
     sh:name "timestampPath";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:versionOfPath;
+    sh:path rdfc:versionOfPath;
     sh:datatype xsd:string;
     sh:name "versionOfPath";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:serialization;
+    sh:path rdfc:serialization;
     sh:datatype xsd:string;
     sh:name "serialization";
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:uniqueIRIs;
+    sh:path rdfc:uniqueIRIs;
     sh:name "uniqueIRIs";
     sh:datatype xsd:boolean;
     sh:minCount 1;
     sh:maxCount 1
   ], [
-    sh:path js:ldesBaseIRI;
+    sh:path rdfc:ldesBaseIRI;
     sh:datatype xsd:string;
     sh:name "ldesBaseIRI";
     sh:minCount 0;
     sh:maxCount 1
   ], [
-    sh:path js:shape;
+    sh:path rdfc:shape;
     sh:datatype xsd:string;
     sh:name "shape";
     sh:minCount 0;

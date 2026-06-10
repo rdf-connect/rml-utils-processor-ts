@@ -1,14 +1,14 @@
 # rml-utils-processor-ts
 
-[![Bun CI](https://github.com/rdf-connect/rml-utils-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/rml-utils-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/rml-utils-processor-ts.svg?style=popout)](https://npmjs.com/package/@rdfc/rml-utils-processor-ts)
+[![Build and tests with Node.js](https://github.com/rdf-connect/rml-utils-processor-ts/actions/workflows/build-test.yml/badge.svg)](https://github.com/rdf-connect/rml-utils-processor-ts/actions/workflows/build-test.yml) [![npm](https://img.shields.io/npm/v/@rdfc/rml-utils-processor-ts.svg?style=popout)](https://npmjs.com/package/@rdfc/rml-utils-processor-ts)
 
-Collection of Typescript utilities around RML (RDF Mapping Language) tools that includes a wrapper over the RML Mapper to be reused within the [RDF-Connect](https://rdf-connect.github.io/rdfc.github.io/) ecosystem  Currently this repository exposes 3 processors:
+Collection of Typescript utilities around RML (RDF Mapping Language) tools that includes a wrapper over the RML Mapper to be reused within the [RDF-Connect](https://rdf-connect.github.io/rdfc.github.io/) ecosystem. Currently this repository exposes 3 processors:
 
-### [`js:Y2R`](https://github.com/rdf-connect/rml-utils-processor-ts/blob/main/processors.ttl#L9)
+### [`rdfc:Yarrrml2RML`](https://github.com/rdf-connect/rml-utils-processor-ts/blob/main/processors.ttl#L8)
 
 This processor takes a stream of YARRRML mapping files as input and converts them to their correspondent representation in RML quads. It relies on the [`yarrrml-parser`](https://github.com/RMLio/yarrrml-parser) library for executing the transformation.
 
-### [`js:RMLMapperReader`](https://github.com/rdf-connect/rml-utils-processor-ts/blob/main/processors.ttl#L44)
+### [`rdfc:RMLMapperJS`](https://github.com/rdf-connect/rml-utils-processor-ts/blob/main/processors.ttl#L44)
 
 This processor executes RML mapping rules using the Java-based [RMLMapper engine](https://github.com/RMLio/rmlmapper-java). A mapping process can be defined within a RDF-Connect (RDF-C) pipeline, by defining an input stream of RML mappings, which will be executed sequentially. A default writer channel (`js:output`) needs to be defined, where all produced RDF triples/quads will be streamed, from mappings that do not define explicit Logical Targets. A set of logical sources (`js:rmlSource`) and targets (`js:rmlTarget`) can be optionally declared to make them visible to the RDF-C pipeline.
 
