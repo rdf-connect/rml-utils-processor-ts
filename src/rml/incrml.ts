@@ -1,4 +1,4 @@
-import type { Stream, Writer } from "@rdfc/js-runner";
+import { Processor, type Reader, type Writer } from "@rdfc/js-runner";
 import { createHash } from "crypto";
 import {
     Quad,
@@ -11,16 +11,11 @@ import {
 } from "n3";
 import { IDLAB_FN, LDES, RDF, RML, RR, FNO, FNML, RMLT, TREE, VOID, XSD, QL, GREL } from "../voc";
 import { Quad_Object } from "@rdfjs/types";
+import { Logger } from "winston";
 
-const { quad, namedNode, blankNode, literal } = DataFactory;
+const { quad, namedNode, literal } = DataFactory;
 
 export const BASE = "http://ex.org/mapping/#";
-
-export type IncRMLConfig = {
-    stateBasePath: string,
-    lifeCycleConfig: LifeCycleConfig
-    targetConfig?: LDESTargetConfig
-};
 
 type LifeCycleConfig = {
     predicate: string,
@@ -64,22 +59,52 @@ type TriplesMapsConfig = {
     counter: number
 };
 
-export async function rml2incrml(
-    rmlStream: Stream<string>,
-    config: IncRMLConfig,
-    incrmlStream: Writer<string>
-) {
-    rmlStream.data(async rml => {
-        const rdfParser = new Parser();
-        // Proceed to expand the mappings and stream them out
-        console.log("[rml2incrml processor] Transforming RML to IncRML mappings");
-        await incrmlStream.push(new N3Writer().quadsToString(
-            expand2IncRML(rdfParser.parse(rml), config)
-        ));
-    }).on("end", async () => await incrmlStream.end());
+export type IncRMLConfig = {
+    stateBasePath: string,
+    lifeCycleConfig: LifeCycleConfig
+    targetConfig?: LDESTargetConfig
+};
+
+type RML2IncRMLArgs = {
+    rmlStream: Reader;
+    config: IncRMLConfig;
+    incrmlStream: Writer;
+};
+
+export class RML2IncRML extends Processor<RML2IncRMLArgs> {
+
+    async init(this: RML2IncRMLArgs & this): Promise<void> {
+        // nothing
+    }
+
+    async transform(this: RML2IncRMLArgs & this): Promise<void> {
+        await rml2incrml(this.rmlStream, this.config, this.incrmlStream, this.logger);
+    }
+
+    async produce(this: RML2IncRMLArgs & this): Promise<void> {
+        // nothing
+    }
 }
 
-function expand2IncRML(rmlQuads: Quad[], config: IncRMLConfig): Quad[] {
+export async function rml2incrml(
+    rmlStream: Reader,
+    config: IncRMLConfig,
+    incrmlStream: Writer,
+    logger: Logger
+) {
+    for await (const rml of rmlStream.strings()) {
+        const rdfParser = new Parser();
+        // Proceed to expand the mappings and stream them out
+        logger.info("[rml2incrml processor] Transforming RML to IncRML mappings");
+        await incrmlStream.string(new N3Writer().quadsToString(
+            expand2IncRML(rdfParser.parse(rml), config, logger)
+        ));
+    }
+
+    await incrmlStream.close();
+}
+
+function expand2IncRML(rmlQuads: Quad[], config: IncRMLConfig, logger: Logger): Quad[] {
     const rmlStore = new Store();
     rmlStore.addQuads(rmlQuads);
     /**
@@ -119,7 +144,7 @@ function expand2IncRML(rmlQuads: Quad[], config: IncRMLConfig): Quad[] {
             for (const graphMap of Object.keys(logSrcObj)) {
                 if (graphMap !== "_subject") {
                     const graphMapObj = <TriplesMapsPerGraphMap>logSrcObj[graphMap]!;
-                    console.log(`[rml2incrml processor] expanding Triples Map for subject template ${template}`);
+                    logger.info(`[rml2incrml processor] expanding Triples Map for subject template ${template}`);
 
                     ["create", "update", "delete"].forEach(event => {
                         incRMLStore.addQuads(generateTriplesMapQuads(

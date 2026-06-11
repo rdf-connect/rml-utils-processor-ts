@@ -1,18 +1,41 @@
 import { createUriAndTermNamespace } from "@treecg/types";
+import type { NamedNode } from "@rdfjs/types";
 
 export * from "@treecg/types";
 
-export const VOID = createUriAndTermNamespace(
+type TermVocabulary<T extends string> = {
+  namespace: NamedNode<string>;
+  custom: (input: string) => NamedNode<string>;
+} & {
+  [K in T]: NamedNode<string>;
+};
+
+type Vocabulary<T extends string> = {
+  namespace: string;
+  custom: (input: string) => string;
+  terms: TermVocabulary<T>;
+} & {
+  [K in T]: string;
+};
+
+function createVocabulary<T extends string>(
+  baseUri: string,
+  ...localNames: T[]
+): Vocabulary<T> {
+  return createUriAndTermNamespace(baseUri, ...localNames) as unknown as Vocabulary<T>;
+}
+
+export const VOID = createVocabulary(
   "http://rdfs.org/ns/void#",
   "Dataset",
   "dataDump",
 );
-export const RDF = createUriAndTermNamespace(
+export const RDF = createVocabulary(
   "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
   "type",
 );
 
-export const RML = createUriAndTermNamespace(
+export const RML = createVocabulary(
   "http://semweb.mmlab.be/ns/rml#",
   "LogicalSource",
   "logicalSource",
@@ -23,7 +46,7 @@ export const RML = createUriAndTermNamespace(
   "iterator",
 );
 
-export const RMLS = createUriAndTermNamespace(
+export const RMLS = createVocabulary(
   "http://semweb.mmlab.be/ns/rmls#",
   "hostName",
   "port",
@@ -33,7 +56,7 @@ export const RMLS = createUriAndTermNamespace(
   "KafkaStream",
 );
 
-export const RMLT = createUriAndTermNamespace(
+export const RMLT = createVocabulary(
   "http://semweb.mmlab.be/ns/rml-target#",
   "LogicalTarget",
   "EventStreamTarget",
@@ -44,7 +67,7 @@ export const RMLT = createUriAndTermNamespace(
   "ldesGenerateImmutableIRI"
 );
 
-export const RR = createUriAndTermNamespace(
+export const RR = createVocabulary(
   "http://www.w3.org/ns/r2rml#",
   "FunctionTermMap",
   "TriplesMap",
@@ -65,25 +88,25 @@ export const RR = createUriAndTermNamespace(
   "IRI",
 );
 
-export const FNML = createUriAndTermNamespace(
+export const FNML = createVocabulary(
   "http://semweb.mmlab.be/ns/fnml#",
   "FunctionTermMap",
   "functionValue",
 );
 
-export const FNO = createUriAndTermNamespace(
+export const FNO = createVocabulary(
   "https://w3id.org/function/ontology#",
   "executes"
 );
 
-export const QL = createUriAndTermNamespace(
+export const QL = createVocabulary(
   "http://semweb.mmlab.be/ns/ql#",
   "JSONPath",
   "CSV",
   "XPath",
 );
 
-export const CSVW = createUriAndTermNamespace(
+export const CSVW = createVocabulary(
   "http://www.w3.org/ns/csvw#",
   "url",
   "dialect",
@@ -92,7 +115,7 @@ export const CSVW = createUriAndTermNamespace(
   "Table",
 );
 
-export const GREL = createUriAndTermNamespace(
+export const GREL = createVocabulary(
   "http://users.ugent.be/~bjdmeest/function/grel.ttl#",
   "array_join",
   "param_a",
@@ -101,7 +124,7 @@ export const GREL = createUriAndTermNamespace(
   "valueParameter2"
 );
 
-export const IDLAB_FN = createUriAndTermNamespace(
+export const IDLAB_FN = createVocabulary(
   "https://w3id.org/imec/idlab/function#",
   "iri",
   "explicitCreate",
@@ -114,7 +137,7 @@ export const IDLAB_FN = createUriAndTermNamespace(
   "watchedProperty"
 );
 
-export const AS = createUriAndTermNamespace(
+export const AS = createVocabulary(
   "https://www.w3.org/ns/activitystreams#",
   "Create",
   "Update",

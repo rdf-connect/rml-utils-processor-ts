@@ -1,11 +1,20 @@
-import { describe, test, expect, afterAll } from "@jest/globals";
-import { SimpleStream } from "@rdfc/js-runner";
-import { Parser, Store } from "n3";
+import { describe, test, expect, afterAll, beforeAll } from "vitest";
+import { FullProc } from "@rdfc/js-runner";
+import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
+import { Parser } from "n3";
+import { RdfStore } from "rdf-stores";
 import { deleteAsync } from "del";
-import { rmlMapper, Source, Target } from "../src/rml/rml";
+import { getJarFile } from "../src/util";
+import { RMLMapperJS, Source, Target } from "../src/rml/rml";
 import { AS, RDF, RDFS } from "../src/voc";
+import { DF, TEST_LOGGER as logger, readChannel } from "./utils";
 
-describe("Functional tests for the rmlMapper Connector Architecture function", () => {
+
+beforeAll(async () => {
+    // Download RMLMapper jar file
+    await getJarFile("/tmp/rmlMapper.jar");
+});
+describe("Functional tests for the RMLMapperJS processor", () => {
     const PREFIXES = `
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
         @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -137,7 +146,7 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ] .
     `;
 
-    const RML_TM_LOCAL_SOURCE_AND_NO_TARGET = (source?) => {
+    const RML_TM_LOCAL_SOURCE_AND_NO_TARGET = (source?: string) => {
         return `
         ex:map_test-mapping_000 a rr:TriplesMap ;
             rdfs:label "test-mapping" ;
@@ -389,11 +398,15 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_TARGET()}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const defaultOutputStream = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const targetOutputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -410,39 +423,53 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        const mappingsPromise = new Promise<void>(resolve => {
-            targetOutputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
-    
-                expect(store.getQuads(null, null, null, null).length).toBe(4);
-                expect(store.getQuads(
-                    "http://example.org/001",
-                    RDF.type,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                expect(store.getQuads(
-                    "http://example.org/002",
-                    RDFS.label,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                resolve();
-            });
-        });
+        // Channel reader for the target output
+        const targetOut = readChannel(targetOutput);
 
-        // Execute function
-        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
-        // Push raw input data
-        await sourceInputStream.push(LOCAL_RAW_DATA);
-        await mappingsPromise;
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
+
+        // Push raw input data and close channel
+        await sourceInput.string(LOCAL_RAW_DATA);
+        await sourceInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check default output
+        const store = RdfStore.createDefault();
+        new Parser().parse((await targetOut)[0]).forEach(quad => store.addQuad(quad));
+
+        expect(store.getQuads(null, null, null, null).length).toBe(4);
+        expect(store.getQuads(
+            DF.namedNode("http://example.org/001"),
+            RDF.terms.type,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(1);
+        expect(store.getQuads(
+            DF.namedNode("http://example.org/002"),
+            RDFS.terms.label,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(1);
     });
 
     test("Mapping process with declared logical source and LDES target", async () => {
@@ -450,11 +477,14 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_LDES_TARGET}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const defaultOutputStream = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const targetOutputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -471,45 +501,59 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        const mappingsPromise = new Promise<void>(resolve => {
-            targetOutputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
-    
-                expect(store.getQuads(null, null, null, null).length).toBe(8);
-                expect(store.getQuads(
-                    null,
-                    RDF.type,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(2);
-                expect(store.getQuads(
-                    null,
-                    "http://purl.org/dc/terms/isVersionOf",
-                    "http://example.org/001",
-                    null).length
-                ).toBe(1);
-                expect(store.getQuads(
-                    null,
-                    "http://purl.org/dc/terms/isVersionOf",
-                    "http://example.org/002",
-                    null).length
-                ).toBe(1);
-                resolve();
-            });
-        });
+        // Channel reader for the target output
+        const targetOut = readChannel(targetOutput);
 
-        // Execute function
-        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
-        // Push raw input data
-        await sourceInputStream.push(LOCAL_RAW_DATA);
-        await mappingsPromise;
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
+
+        // Push raw input data and close channel
+        await sourceInput.string(LOCAL_RAW_DATA);
+        await sourceInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check target output
+        const store = RdfStore.createDefault();
+        new Parser().parse((await targetOut)[0]).forEach(quad => store.addQuad(quad));
+
+        expect(store.getQuads(null, null, null, null).length).toBe(8);
+        expect(store.getQuads(
+            null,
+            RDF.terms.type,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(2);
+        expect(store.getQuads(
+            null,
+            DF.namedNode("http://purl.org/dc/terms/isVersionOf"),
+            DF.namedNode("http://example.org/001"),
+            null).length
+        ).toBe(1);
+        expect(store.getQuads(
+            null,
+            DF.namedNode("http://purl.org/dc/terms/isVersionOf"),
+            DF.namedNode("http://example.org/002"),
+            null).length
+        ).toBe(1);
     });
 
     test("Mapping process with declared logical source data input arriving before mappings", async () => {
@@ -517,11 +561,14 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_TARGET()}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const defaultOutputStream = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const targetOutputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -538,39 +585,53 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        const mappingsPromise = new Promise<void>(resolve => {
-            targetOutputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
+        // Channel reader for the target output
+        const targetOut = readChannel(targetOutput);
 
-                expect(store.getQuads(null, null, null, null).length).toBe(4);
-                expect(store.getQuads(
-                    "http://example.org/001",
-                    RDF.type,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                expect(store.getQuads(
-                    "http://example.org/002",
-                    RDFS.label,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                resolve();
-            });
-        });
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-        // Execute function
-        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
         // Push raw input data first
-        await sourceInputStream.push(LOCAL_RAW_DATA);
+        await sourceInput.string(LOCAL_RAW_DATA);
+        await sourceInput.close();
 
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
-        await mappingsPromise;
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check target output
+        const store = RdfStore.createDefault();
+        new Parser().parse((await targetOut)[0]).forEach(quad => store.addQuad(quad));
+
+        expect(store.getQuads(null, null, null, null).length).toBe(4);
+        expect(store.getQuads(
+            DF.namedNode("http://example.org/001"),
+            RDF.terms.type,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(1);
+        expect(store.getQuads(
+            DF.namedNode("http://example.org/002"),
+            RDFS.terms.label,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(1);
     });
 
     test("Mapping process with multiple declared logical sources data input arriving before mappings", async () => {
@@ -582,12 +643,15 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_TARGET("dataset/data2.xml")}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const defaultOutputStream = new SimpleStream<string>();
-        const sourceInputStream1 = new SimpleStream<string>();
-        const sourceInputStream2 = new SimpleStream<string>();
-        const targetOutputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput1, sourceInputStream1] = channel(runner, "dataInput1");
+        const [sourceInput2, sourceInputStream2] = channel(runner, "dataInput2");
+
         const sources: Source[] = [
             {
                 location: "dataset/data1.xml",
@@ -610,51 +674,67 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        let counter = 0;
-        const mappingsPromise = new Promise<void>(resolve => {
-            targetOutputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
-                expect(store.getQuads(null, null, null, null).length).toBe(4);
-                expect(store.getQuads(
-                    "http://example.org/001",
-                    RDF.type,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                expect(store.getQuads(
-                    "http://example.org/002",
-                    RDFS.label,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                counter++;
-                if (counter === 3) {
-                    resolve();
-                }
-            });
-        });
+        // Channel reader for the target output
+        const targetOut = readChannel(targetOutput);
 
-        // Execute function
-        await rmlMapper(mappingReader, defaultOutputStream, sources, targets, "/tmp/rmlMapper.jar");
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
         // Push some data asynchronously
         await Promise.all([
-            sourceInputStream1.push(LOCAL_RAW_DATA),
-            sourceInputStream2.push(LOCAL_RAW_DATA)
+            sourceInput1.string(LOCAL_RAW_DATA),
+            sourceInput2.string(LOCAL_RAW_DATA)
         ]);
         // Push some mapping
-        await mappingReader.push(rmlDoc1);
+        await rmlInput.string(rmlDoc1);
         // Push some more data
-        await sourceInputStream1.push(LOCAL_RAW_DATA_UPDATE);
-        await sourceInputStream2.push(LOCAL_RAW_DATA_UPDATE);
-        await sourceInputStream1.push(LOCAL_RAW_DATA_YET_ANOTHER_UPDATE);
-        await sourceInputStream2.push(LOCAL_RAW_DATA_YET_ANOTHER_UPDATE);
+        await sourceInput1.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput2.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput1.string(LOCAL_RAW_DATA_YET_ANOTHER_UPDATE);
+        await sourceInput2.string(LOCAL_RAW_DATA_YET_ANOTHER_UPDATE);
         // Finish pushing mappings input data
-        await mappingReader.push(rmlDoc2);
-        await mappingReader.end();
-        await mappingsPromise;
+        await rmlInput.string(rmlDoc2);
+        await rmlInput.close();
+        await sourceInput1.close();
+        await sourceInput2.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check target outputs - expect 3 emissions
+        const outputs = await targetOut;
+        expect(outputs.length).toBeGreaterThanOrEqual(3);
+
+        for (let i = 0; i < 3; i++) {
+            const store = RdfStore.createDefault();
+            new Parser().parse(outputs[i]).forEach(quad => store.addQuad(quad));
+            expect(store.getQuads(null, null, null, null).length).toBe(4);
+            expect(store.getQuads(
+                DF.namedNode("http://example.org/001"),
+                RDF.terms.type,
+                null,
+                DF.namedNode("http://example.org/myNamedGraph")).length
+            ).toBe(1);
+            expect(store.getQuads(
+                DF.namedNode("http://example.org/002"),
+                RDFS.terms.label,
+                null,
+                DF.namedNode("http://example.org/myNamedGraph")).length
+            ).toBe(1);
+        }
     });
 
     test("Mapping process without any declared logical sources and using default output", async () => {
@@ -662,29 +742,45 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_REMOTE_SOURCE_AND_NO_TARGET}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const outputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
 
-        const mappingsPromise = new Promise<void>(resolve => {
-            outputStream.data(data => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
+        // Channel reader for the default output
+        const defaultOut = readChannel(defaultOutput);
 
-                expect(store.getQuads(null, RDF.type, null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
-                resolve();
-            });
-        });
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources: undefined,
+                targets: undefined,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-        // Execute function
-        await rmlMapper(mappingReader, outputStream, undefined, undefined, "/tmp/rmlMapper.jar");
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
-        await mappingsPromise;
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check default output
+        const store = RdfStore.createDefault();
+        new Parser().parse((await defaultOut)[0]).forEach(quad => store.addQuad(quad));
+
+        expect(store.getQuads(null, RDF.terms.type, null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, DF.namedNode("http://example.org/name"), null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, DF.namedNode("http://example.org/availableBikes"), null, null).length).toBeGreaterThan(0);
     });
 
     test("Mapping process with declared and undeclared logical sources", async () => {
@@ -694,10 +790,13 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${RML_TM_REMOTE_SOURCE_AND_NO_TARGET}
         `;
 
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const outputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -707,29 +806,43 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        const mappingsPromise = new Promise<void>(resolve => {
-            outputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
-                expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
-                resolve();
-            });
-        });
+        // Channel reader for the default output
+        const defaultOut = readChannel(defaultOutput);
 
-        // Execute function
-        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets: undefined,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
         // Push raw input data first
-        await sourceInputStream.push(LOCAL_RAW_DATA);
+        await sourceInput.string(LOCAL_RAW_DATA);
+        await sourceInput.close();
 
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
-        await mappingsPromise;
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check default output
+        const store = RdfStore.createDefault();
+        new Parser().parse((await defaultOut)[0]).forEach(quad => store.addQuad(quad));
+        expect(store.getQuads(null, RDF.terms.type, DF.namedNode("http://example.org/Entity"), null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, RDFS.terms.label, null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, DF.namedNode("http://example.org/name"), null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, DF.namedNode("http://example.org/availableBikes"), null, null).length).toBeGreaterThan(0);
     });
 
     test("Mapping process with declared and undeclared logical sources and targets", async () => {
@@ -739,10 +852,14 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${RML_TM_REMOTE_SOURCE_AND_NO_TARGET}
         `;
 
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const outputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -755,46 +872,67 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
         const targets: Target[] = [
             {
                 location: "file:///results/output.nq",
-                writer: outputStream, // Here we are using the same stream as the default output
+                writer: targetOutputStream,
                 data: ""
             }
         ];
 
-        // Check output
-        const mappingsPromise = new Promise<void>(resolve => {
-            outputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
-                expect(store.getQuads(null, RDF.type, "http://example.org/Entity", null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, RDFS.label, null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, "http://example.org/name", null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(null, "http://example.org/availableBikes", null, null).length).toBeGreaterThan(0);
-                expect(store.getQuads(
-                    "http://example.org/001",
-                    RDF.type,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                expect(store.getQuads(
-                    "http://example.org/002",
-                    RDFS.label,
-                    null,
-                    "http://example.org/myNamedGraph").length
-                ).toBe(1);
-                resolve();
-            });
-        });
+        // Channel readers for outputs
+        const targetOut = readChannel(targetOutput);
+        const defaultOut = readChannel(defaultOutput);
 
-        // Execute function
-        await rmlMapper(mappingReader, outputStream, sources, targets, "/tmp/rmlMapper.jar");
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
         // Push raw input data first
-        await sourceInputStream.push(LOCAL_RAW_DATA);
+        await sourceInput.string(LOCAL_RAW_DATA);
+        await sourceInput.close();
 
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
-        await mappingsPromise;
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check combined output (both target and default)
+        const targetOutputs = await targetOut;
+        const defaultOutputs = await defaultOut;
+
+        // Combine all outputs for validation
+        const allData = targetOutputs[0] + "\n" + defaultOutputs[0];
+        const store = RdfStore.createDefault();
+        new Parser().parse(allData).forEach(quad => store.addQuad(quad));
+
+        expect(store.getQuads(null, RDF.terms.type, DF.namedNode("http://example.org/Entity"), null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, RDFS.terms.label, null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, DF.namedNode("http://example.org/name"), null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(null, DF.namedNode("http://example.org/availableBikes"), null, null).length).toBeGreaterThan(0);
+        expect(store.getQuads(
+            DF.namedNode("http://example.org/001"),
+            RDF.terms.type,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(1);
+        expect(store.getQuads(
+            DF.namedNode("http://example.org/002"),
+            RDFS.terms.label,
+            null,
+            DF.namedNode("http://example.org/myNamedGraph")).length
+        ).toBe(1);
     });
 
     test("Mapping process with async input updates", async () => {
@@ -802,10 +940,13 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET()}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const outputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -815,42 +956,58 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        let first = true;
-        const mappingsPromise = new Promise<void>(resolve => {
-            outputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
+        // Channel reader for the default output
+        const defaultOut = readChannel(defaultOutput);
 
-                expect(store.getQuads(null, null, null, null).length).toBe(4);
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets: undefined,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-                if (first) {
-                    first = false;
-                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                        .object.value).toBe("some data");
-                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                        .object.value).toBe("some other data");
-                } else {
-                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                        .object.value).toBe("some new data");
-                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                        .object.value).toBe("some other new data");
-                    resolve();
-                }
-            });
-        });
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
-        // Execute function
-        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
-
-        // Push mappings input data
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
 
         // Asynchronously push data updates
-        sourceInputStream.push(LOCAL_RAW_DATA);
-        await sourceInputStream.push(LOCAL_RAW_DATA_UPDATE);
-        await mappingsPromise;
+        sourceInput.string(LOCAL_RAW_DATA);
+        await sourceInput.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check default outputs - expect 2 emissions
+        const outputs = await defaultOut;
+        expect(outputs.length).toBeGreaterThanOrEqual(2);
+
+        // Check first output
+        const store1 = RdfStore.createDefault();
+        new Parser().parse(outputs[0]).forEach(quad => store1.addQuad(quad));
+        expect(store1.getQuads(null, null, null, null).length).toBe(4);
+        expect(store1.getQuads(DF.namedNode("http://example.org/001"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some data");
+        expect(store1.getQuads(DF.namedNode("http://example.org/002"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some other data");
+
+        // Check second output
+        const store2 = RdfStore.createDefault();
+        new Parser().parse(outputs[1]).forEach(quad => store2.addQuad(quad));
+        expect(store2.getQuads(null, null, null, null).length).toBe(4);
+        expect(store2.getQuads(DF.namedNode("http://example.org/001"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some new data");
+        expect(store2.getQuads(DF.namedNode("http://example.org/002"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some other new data");
     });
 
     test("Mapping process with async input updates for multiple sources", async () => {
@@ -862,11 +1019,14 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_LOCAL_SOURCE_AND_NO_TARGET("dataset/data2.xml")}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const sourceInputStream1 = new SimpleStream<string>();
-        const sourceInputStream2 = new SimpleStream<string>();
-        const outputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [sourceInput1, sourceInputStream1] = channel(runner, "dataInput1");
+        const [sourceInput2, sourceInputStream2] = channel(runner, "dataInput2");
+
         const sources: Source[] = [
             {
                 location: "dataset/data1.xml",
@@ -882,47 +1042,62 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
-        // Check output
-        let counter = 0;
-        const mappingsPromise = new Promise<void>(resolve => {
-            outputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
+        // Channel reader for the default output
+        const defaultOut = readChannel(defaultOutput);
 
-                expect(store.getQuads(null, null, null, null).length).toBe(4);
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets: undefined,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-                if (counter === 0) {
-                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                        .object.value).toBe("some data");
-                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                        .object.value).toBe("some other data");
-                } else {
-                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                        .object.value).toBe("some new data");
-                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                        .object.value).toBe("some other new data");
-                }
-                counter++;
-                if (counter === 2) {
-                    resolve();
-                }
-            });
-        });
-
-        // Execute function
-        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
         // Push mappings input data
-        await mappingReader.push(rmlDoc1);
-        await mappingReader.push(rmlDoc2);
-        await mappingReader.end();
+        await rmlInput.string(rmlDoc1);
+        await rmlInput.string(rmlDoc2);
+        await rmlInput.close();
 
         // Asynchronously push data updates
-        sourceInputStream1.push(LOCAL_RAW_DATA);
-        sourceInputStream2.push(LOCAL_RAW_DATA);
-        sourceInputStream1.push(LOCAL_RAW_DATA_UPDATE);
-        await sourceInputStream2.push(LOCAL_RAW_DATA_UPDATE);
-        await mappingsPromise;
+        sourceInput1.string(LOCAL_RAW_DATA);
+        sourceInput2.string(LOCAL_RAW_DATA);
+        sourceInput1.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput2.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput1.close();
+        await sourceInput2.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check default outputs - expect 2 emissions
+        const outputs = await defaultOut;
+        expect(outputs.length).toBeGreaterThanOrEqual(2);
+
+        // Check first output
+        const store1 = RdfStore.createDefault();
+        new Parser().parse(outputs[0]).forEach(quad => store1.addQuad(quad));
+        expect(store1.getQuads(null, null, null, null).length).toBe(4);
+        expect(store1.getQuads(DF.namedNode("http://example.org/001"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some data");
+        expect(store1.getQuads(DF.namedNode("http://example.org/002"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some other data");
+
+        // Check second output
+        const store2 = RdfStore.createDefault();
+        new Parser().parse(outputs[1]).forEach(quad => store2.addQuad(quad));
+        expect(store2.getQuads(null, null, null, null).length).toBe(4);
+        expect(store2.getQuads(DF.namedNode("http://example.org/001"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some new data");
+        expect(store2.getQuads(DF.namedNode("http://example.org/002"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some other new data");
     });
 
     test("Stateful mapping process with independent sources coming via the same logical source", async () => {
@@ -930,10 +1105,13 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             ${PREFIXES}
             ${RML_TM_STATEFUL}
         `;
+        const runner = createRunner();
+
         // Define function parameters
-        const mappingReader = new SimpleStream<string>();
-        const sourceInputStream = new SimpleStream<string>();
-        const outputStream = new SimpleStream<string>();
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
         const sources: Source[] = [
             {
                 location: "dataset/data.xml",
@@ -944,55 +1122,67 @@ describe("Functional tests for the rmlMapper Connector Architecture function", (
             }
         ];
 
+        // Channel reader for the default output
+        const defaultOut = readChannel(defaultOutput);
 
-        let first = true;
-        // Check output
-        const mappingsPromise = new Promise<void>(resolve => {
-            outputStream.data((data: string) => {
-                const store = new Store();
-                store.addQuads(new Parser().parse(data));
-                if (first) {
-                    first = false;
-                    expect(store.getQuads("http://example.org/001", RDFS.label, null, null)[0]
-                        .object.value).toBe("some data");
-                    expect(store.getQuads("http://example.org/001", "http://example.org/lifeCycleType", null, null)[0]
-                        .object.value).toBe(AS.Create);
-                    expect(store.getQuads("http://example.org/002", RDFS.label, null, null)[0]
-                        .object.value).toBe("some other data");
-                    expect(store.getQuads("http://example.org/002", "http://example.org/lifeCycleType", null, null)[0]
-                        .object.value).toBe(AS.Create);
-                } else {
-                    expect(store.getQuads("http://example.org/003", RDFS.label, null, null)[0]
-                        .object.value).toBe("some data");
-                    expect(store.getQuads("http://example.org/003", "http://example.org/lifeCycleType", null, null)[0]
-                        .object.value).toBe(AS.Create);
-                    expect(store.getQuads("http://example.org/004", RDFS.label, null, null)[0]
-                        .object.value).toBe("some other data");
-                    expect(store.getQuads("http://example.org/004", "http://example.org/lifeCycleType", null, null)[0]
-                        .object.value).toBe(AS.Create);
-                    resolve();
-                }
-            });
-        });
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets: undefined,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
 
-        // Execute function
-        await rmlMapper(mappingReader, outputStream, sources, undefined, "/tmp/rmlMapper.jar");
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
 
-        // Push mappings
-        await mappingReader.push(rmlDoc);
-        await mappingReader.end();
+        // Push mappings and close channel
+        await rmlInput.string(rmlDoc);
+        await rmlInput.close();
 
         // Push data for first source
-        await sourceInputStream.push(LOCAL_SOURCE_1);
+        await sourceInput.string(LOCAL_SOURCE_1);
         // Push data for second source
-        await sourceInputStream.push(LOCAL_SOURCE_2);
-        await mappingsPromise;
+        await sourceInput.string(LOCAL_SOURCE_2);
+        await sourceInput.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Check default outputs - expect 2 emissions
+        const outputs = await defaultOut;
+        expect(outputs.length).toBeGreaterThanOrEqual(2);
+
+        // Check first output (first source)
+        const store1 = RdfStore.createDefault();
+        new Parser().parse(outputs[0]).forEach(quad => store1.addQuad(quad));
+        expect(store1.getQuads(DF.namedNode("http://example.org/001"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some data");
+        expect(store1.getQuads(DF.namedNode("http://example.org/001"), DF.namedNode("http://example.org/lifeCycleType"), null, null)[0]
+            .object.value).toBe(AS.Create);
+        expect(store1.getQuads(DF.namedNode("http://example.org/002"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some other data");
+        expect(store1.getQuads(DF.namedNode("http://example.org/002"), DF.namedNode("http://example.org/lifeCycleType"), null, null)[0]
+            .object.value).toBe(AS.Create);
+
+        // Check second output (second source)
+        const store2 = RdfStore.createDefault();
+        new Parser().parse(outputs[1]).forEach(quad => store2.addQuad(quad));
+        expect(store2.getQuads(DF.namedNode("http://example.org/003"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some data");
+        expect(store2.getQuads(DF.namedNode("http://example.org/003"), DF.namedNode("http://example.org/lifeCycleType"), null, null)[0]
+            .object.value).toBe(AS.Create);
+        expect(store2.getQuads(DF.namedNode("http://example.org/004"), RDFS.terms.label, null, null)[0]
+            .object.value).toBe("some other data");
+        expect(store2.getQuads(DF.namedNode("http://example.org/004"), DF.namedNode("http://example.org/lifeCycleType"), null, null)[0]
+            .object.value).toBe(AS.Create);
     });
 });
-
-function sleep(x: number): Promise<unknown> {
-    return new Promise(resolve => setTimeout(resolve, x));
-}
 
 afterAll(async () => {
     // Clean up temporal files
