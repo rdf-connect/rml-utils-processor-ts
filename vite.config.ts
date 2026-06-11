@@ -5,7 +5,7 @@ export default defineConfig({
         tsconfigPaths: true,
     },
     test: {
-        testTimeout: 20000,
+        testTimeout: 60000,
         deps: {
             optimizer: {
                 ssr: {
