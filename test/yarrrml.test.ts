@@ -1,26 +1,11 @@
 import { describe, test, expect } from "vitest";
-import { FullProc, Reader } from "@rdfc/js-runner";
+import { FullProc } from "@rdfc/js-runner";
 import { Yarrrml2RML } from "../src/yarrrml/yarrrml";
 import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
 import { Parser, Store } from "n3";
 import { RDF, RML, RR } from "../src/voc";
-import { createLogger, transports } from "winston";
+import { TEST_LOGGER as logger, readChannel } from "./utils";
 
-const logger = createLogger({
-    transports: new transports.Console({
-        level: "debug",
-    }),
-});
-
-async function strings(reader: Reader) {
-    const out: string[] = [];
-
-    for await (const st of reader.strings()) {
-        out.push(st);
-    }
-
-    return out;
-}
 
 describe("Functional tests for the Yarrrml2RML processor", () => {
     const yarrrmlDoc = `
@@ -44,7 +29,7 @@ describe("Functional tests for the Yarrrml2RML processor", () => {
         const [yarrrmlInput, reader] = channel(runner, "input");
         const [writer, rmlOutput] = channel(runner, "output");
 
-        const rml = strings(rmlOutput);
+        const rml = readChannel(rmlOutput);
 
         const proc = <FullProc<Yarrrml2RML>>new Yarrrml2RML(
             {
