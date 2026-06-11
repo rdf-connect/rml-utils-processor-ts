@@ -1,6 +1,6 @@
 {
   "name": "@rdfc/rml-utils-processor-ts",
-  "version": "0.6.5",
+  "version": "1.0.0",
   "description": "Collection of Typescript utilities around RML tools to be reused within the RDF-Connect ecosystem",
   "type": "module",
   "scripts": {
