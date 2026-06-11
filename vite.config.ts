@@ -1,9 +1,12 @@
 import { defineConfig } from "vitest/config";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-    plugins: [tsconfigPaths()],
+    resolve: {
+        tsconfigPaths: true,
+    },
     test: {
+        testTimeout: 60000,
+        hookTimeout: 60000,
         deps: {
             optimizer: {
                 ssr: {
