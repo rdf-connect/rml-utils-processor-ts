@@ -8,7 +8,7 @@ import { BASE, RML2IncRML, IncRMLConfig } from "../src/rml/incrml";
 import { TEST_LOGGER as logger, DF, readChannel } from "./utils";
 
 
-describe("Functional tests for the rml2incrml Connector Architecture function", () => {
+describe("Functional tests for the RML2IncRML processor", () => {
     const PREFIXES = `
         @prefix rdf: <${RDF.namespace}> .
         @prefix rr: <${RR.namespace}> .
