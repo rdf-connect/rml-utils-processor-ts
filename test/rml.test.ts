@@ -1,13 +1,19 @@
-import { describe, test, expect, afterAll } from "vitest";
+import { describe, test, expect, afterAll, beforeAll } from "vitest";
 import { FullProc } from "@rdfc/js-runner";
 import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
 import { Parser } from "n3";
 import { RdfStore } from "rdf-stores";
 import { deleteAsync } from "del";
+import { getJarFile } from "../src/util";
 import { RMLMapperJS, Source, Target } from "../src/rml/rml";
 import { AS, RDF, RDFS } from "../src/voc";
 import { DF, TEST_LOGGER as logger, readChannel } from "./utils";
 
+
+beforeAll(async () => {
+    // Download RMLMapper jar file
+    await getJarFile("/tmp/rmlMapper.jar");
+});
 describe("Functional tests for the RMLMapperJS processor", () => {
     const PREFIXES = `
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -1177,10 +1183,6 @@ describe("Functional tests for the RMLMapperJS processor", () => {
             .object.value).toBe(AS.Create);
     });
 });
-
-function sleep(x: number): Promise<unknown> {
-    return new Promise(resolve => setTimeout(resolve, x));
-}
 
 afterAll(async () => {
     // Clean up temporal files
