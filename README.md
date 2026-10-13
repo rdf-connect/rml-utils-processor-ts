@@ -76,7 +76,7 @@ The processor reads one or more RML mapping documents from `rdfc:mappings`. It c
 
 - `rdfc:sourceLocation` (`string`, required): Source location as referenced by `rml:source` in the mapping document.
 - `rdfc:input` (`rdfc:Reader`, required): Channel that provides source data.
-- `rdfc:trigger` (`boolean`, optional): If true, this source can trigger additional mapping executions when new data arrives.
+- `rdfc:trigger` (`boolean`, optional): If true, this source can trigger additional mapping executions when new data arrives. Default: `false`.
 - `rdfc:incRMLStateIndex` (`string`, optional): Regex used to extract a source identifier from incoming data. The first capture group is appended to IncRML state paths so independent datasets coming via the same Logical Source can keep a separate state.
 
 **`rdfc:RmlTarget` parameters:**
