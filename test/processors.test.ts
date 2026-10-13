@@ -89,4 +89,21 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.config.stateBasePath).toBe(pathToFileURL(resolve("./state")).href);
         expect(proc.config.lifeCycleConfig.predicate).toBe("http://ex.org/lifeCycleProp");
     });
+
+    test("rdfc:RMLMapperJS falls back to its default values", async () => {
+        const proc = await getProc<RMLMapperJS>(
+            `<http://example.com/ns#processor> a rdfc:RMLMapperJS;
+                rdfc:mappings <reader>;
+                rdfc:output <writer>;
+                rdfc:rmlSource [
+                    rdfc:sourceLocation "dataset/data.xml";
+                    rdfc:input <sourceReader>
+                ].`,
+            "RMLMapperJS",
+        );
+
+        expect(proc.sources).toHaveLength(1);
+        expect(proc.sources![0].location).toBe("dataset/data.xml");
+        expect(proc.sources![0].trigger).toBe(false);
+    });
 });
