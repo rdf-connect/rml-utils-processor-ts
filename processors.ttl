@@ -56,6 +56,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:path rdfc:trigger;
     sh:datatype xsd:boolean;
     sh:name "trigger";
+    sh:defaultValue false;
     sh:maxCount 1;
   ], [
     sh:path rdfc:incRMLStateIndex;
@@ -69,7 +70,8 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
   sh:targetClass rdfc:RmlTarget;
   sh:property [
     sh:path rdfc:targetLocation;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:name "location";
     sh:maxCount 1;
     sh:minCount 1;
@@ -108,7 +110,8 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
   ], [
     sh:path rdfc:rmlJar;
     sh:name "jarLocation";
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:minCount 0;
     sh:maxCount 1;
   ].
@@ -147,7 +150,8 @@ rdfc:IncRMLTransformer a rdfc:Processor;
   sh:targetClass rdfc:IncRMLConfig;
   sh:property [
     sh:path rdfc:stateBasePath;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:name "stateBasePath";
     sh:maxCount 1;
     sh:minCount 1

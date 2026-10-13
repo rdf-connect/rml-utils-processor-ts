@@ -3,6 +3,8 @@ import { FullProc as ProcInstance, Processor } from "@rdfc/js-runner";
 import { ProcHelper } from "@rdfc/js-runner/lib/testUtils";
 import { resolve } from "path";
 import { pathToFileURL } from "url";
+import { rmSync, writeFileSync } from "fs";
+import { getJarFile, toPath } from "../src/util";
 import { Yarrrml2RML } from "../src/yarrrml/yarrrml";
 import { RMLMapperJS } from "../src/rml/rml";
 import { RML2IncRML } from "../src/rml/incrml";
@@ -88,5 +90,55 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.incrmlStream.constructor.name).toBe("WriterInstance");
         expect(proc.config.stateBasePath).toBe(pathToFileURL(resolve("./state")).href);
         expect(proc.config.lifeCycleConfig.predicate).toBe("http://ex.org/lifeCycleProp");
+    });
+
+    test("rdfc:RMLMapperJS falls back to its default values", async () => {
+        const proc = await getProc<RMLMapperJS>(
+            `<http://example.com/ns#processor> a rdfc:RMLMapperJS;
+                rdfc:mappings <reader>;
+                rdfc:output <writer>;
+                rdfc:rmlSource [
+                    rdfc:sourceLocation "dataset/data.xml";
+                    rdfc:input <sourceReader>
+                ].`,
+            "RMLMapperJS",
+        );
+
+        expect(proc.sources).toHaveLength(1);
+        expect(proc.sources![0].location).toBe("dataset/data.xml");
+        expect(proc.sources![0].trigger).toBe(false);
+    });
+
+    test("rdfc:RMLMapperJS takes its jar and target locations written as IRIs", async () => {
+        const proc = await getProc<RMLMapperJS>(
+            `<http://example.com/ns#processor> a rdfc:RMLMapperJS;
+                rdfc:mappings <reader>;
+                rdfc:output <writer>;
+                rdfc:rmlTarget [
+                    rdfc:targetLocation <file:///results/output.nq>;
+                    rdfc:output <targetWriter>
+                ];
+                rdfc:rmlJar <./iri-test-rmlmapper.jar>.`,
+            "RMLMapperJS",
+        );
+
+        // Matched as is against void:dataDump in the mapping, so not turned into a path
+        expect(proc.targets![0].location).toBe("file:///results/output.nq");
+
+        const jar = resolve("./iri-test-rmlmapper.jar");
+        expect(proc.jarLocation).toBe(pathToFileURL(jar).href);
+        writeFileSync(jar, "");
+        try {
+            expect(await getJarFile(proc.jarLocation)).toBe(jar);
+        } finally {
+            rmSync(jar, { force: true });
+        }
+    });
+
+    test("toPath keeps paths and turns file: URLs into paths", () => {
+        expect(toPath("./rmlmapper.jar")).toBe("./rmlmapper.jar");
+        expect(toPath("/tmp/state")).toBe("/tmp/state");
+        expect(toPath("https://example.org/rmlmapper.jar")).toBe("https://example.org/rmlmapper.jar");
+        expect(toPath("file:///tmp/my%20data/state")).toBe("/tmp/my data/state");
     });
 });
