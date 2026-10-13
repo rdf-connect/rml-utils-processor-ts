@@ -94,7 +94,6 @@ export async function rmlMapper(
             const filename = source.location.split("/").pop();
             source.newLocation = `/tmp/rml-${uid}-input-${randomUUID()}-${filename}`;
             source.hasData = false;
-            source.trigger = !!source.trigger;
 
             // Consume source updates while preserving sequential mapping executions.
             sourceReaders.push((async () => {
