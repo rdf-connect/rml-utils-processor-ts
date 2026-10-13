@@ -70,7 +70,7 @@ The processor reads one or more RML mapping documents from `rdfc:mappings`. It c
 - `rdfc:output` (`rdfc:Writer`, required): Default output channel for RDF produced by mappings without an explicit logical target.
 - `rdfc:rmlSource` (`rdfc:RmlSource`, optional): RDF-Connect managed logical source declarations.
 - `rdfc:rmlTarget` (`rdfc:RmlTarget`, optional): RDF-Connect managed logical target declarations.
-- `rdfc:rmlJar` (`string`, optional): Path or URL to an RMLMapper jar. If omitted, the default RMLMapper jar is downloaded automatically.
+- `rdfc:rmlJar` (`string` or IRI, optional): Path or URL to an RMLMapper jar. If omitted, the default RMLMapper jar is downloaded automatically.
 
 **`rdfc:RmlSource` parameters:**
 
@@ -81,7 +81,7 @@ The processor reads one or more RML mapping documents from `rdfc:mappings`. It c
 
 **`rdfc:RmlTarget` parameters:**
 
-- `rdfc:targetLocation` (`string`, required): Target location as referenced by `void:dataDump` in the mapping document.
+- `rdfc:targetLocation` (`string` or IRI, required): Target location as referenced by `void:dataDump` in the mapping document. It is compared as is, so an IRI must be absolute, like `<file:///results/output.nq>`: a relative one is resolved against the pipeline and no longer matches.
 - `rdfc:output` (`rdfc:Writer`, required): Channel that receives RDF written to that logical target.
 
 Example:
@@ -121,7 +121,7 @@ An optional LDES target configuration can be provided to generate LDES metadata 
 
 **`rdfc:IncRMLConfig` parameters:**
 
-- `rdfc:stateBasePath` (`string`, required): Base path used for generated IncRML state files.
+- `rdfc:stateBasePath` (`string` or IRI, required): Base path used for generated IncRML state files.
 - `rdfc:lifeCycleConfig` (`rdfc:LifeCycleConfig`, required): Lifecycle predicate and function configuration.
 - `rdfc:targetConfig` (`rdfc:LDESTargetConfig`, optional): LDES logical target configuration.
 
