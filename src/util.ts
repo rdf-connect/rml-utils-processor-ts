@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { randomUUID as cryptoUUID } from "crypto";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { toPath } from "@rdfc/utils-js";
 
 const DEFAULT_URL = "https://github.com/RMLio/rmlmapper-java/releases/download/v7.0.0/rmlmapper-7.0.0-r374-all.jar";
@@ -36,9 +36,9 @@ export async function getJarFile(mLocation: string | undefined): Promise<string>
 
   if (!rmlJarPromise) {
     rmlJarPromise = (async function () {
-      const cmd = `wget ${url} -O ${location}`;
-      console.log("Executing $", cmd)
-      const proc = exec(cmd);
+      // Without a shell, so a location with spaces stays one argument
+      console.log("Executing $ wget", url, "-O", location);
+      const proc = execFile("wget", [url, "-O", location]);
       await new Promise(res => proc.once("exit", res));
       return location;
     })();

@@ -1,5 +1,5 @@
 import { Processor, type Reader, type Writer } from "@rdfc/js-runner";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { access, constants, readFile, unlink, writeFile } from "fs/promises";
 import {
     DataFactory,
@@ -489,9 +489,8 @@ async function executeMappings(
     for (let mappingFile of mappingLocations) {
         const t0 = new Date();
         logger.info(`[rmlMapper processor] Running ${mappingFile}`);
-        const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
-
-        const proc = exec(command);
+        // Without a shell, so a jar location with spaces stays one argument
+        const proc = execFile("java", ["-jar", jarFile, "-m", mappingFile, "-o", outputFile]);
         proc.stdout!.on("data", function (data) {
             logger.info(`[rmlMapper processor] rml mapper std: ${data.toString()}`);
         });
