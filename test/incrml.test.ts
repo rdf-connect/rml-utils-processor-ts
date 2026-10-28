@@ -2,10 +2,12 @@ import { describe, test, expect } from "vitest";
 import { FullProc } from "@rdfc/js-runner";
 import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
 import { RdfStore } from "rdf-stores";
+import { resolve } from "path";
 import { Parser } from "n3";
 import { RDF, RR, RML, RMLT, IDLAB_FN, AS, FNML, FNO, GREL } from "../src/voc";
 import { BASE, RML2IncRML, IncRMLConfig } from "../src/rml/incrml";
 import { TEST_LOGGER as logger, DF, readChannel } from "./utils";
+import { fromPath } from "@rdfc/utils-js";
 
 
 describe("Functional tests for the RML2IncRML processor", () => {
@@ -1256,5 +1258,52 @@ describe("Functional tests for the RML2IncRML processor", () => {
                 }
             }
         });
+    });
+
+    test("stateBasePath written as an IRI gives state file paths", async () => {
+        const runner = createRunner();
+        const [rmlInput, reader] = channel(runner, "rml");
+        const [writer, incrmlOutput] = channel(runner, "incrml");
+
+        const incrml = readChannel(incrmlOutput);
+
+        // <./state> in a pipeline reaches the processor as a file: URL
+        const config: IncRMLConfig = {
+            stateBasePath: fromPath("./state"),
+            lifeCycleConfig: {
+                predicate: "http://ex.org/ns/lifeCycleProperty",
+                create: { function: IDLAB_FN.explicitCreate, type: AS.Create },
+                update: { function: IDLAB_FN.implicitUpdate, type: AS.Update },
+                delete: { function: IDLAB_FN.implicitDelete, type: AS.Delete }
+            }
+        };
+
+        const proc = <FullProc<RML2IncRML>>new RML2IncRML({
+            rmlStream: reader,
+            incrmlStream: writer,
+            config,
+        }, logger);
+
+        await proc.init();
+
+        const transformPromise = proc.transform();
+        await rmlInput.string(`
+            ${PREFIXES}
+            ${TM(0, "dataset/data.xml", "http://ex.org/instances/{Property/@Value}")};
+            ${POM("http://ex.org/ns/someProperty", { pred: "rr:constant", obj: "\"Some Value\"" })}.
+        `);
+        await rmlInput.close();
+        await transformPromise;
+
+        const store = RdfStore.createDefault();
+        new Parser().parse((await incrml)[0]).forEach(quad => store.addQuad(quad as any));
+
+        const statePaths = store.getQuads(null, RR.terms.constant, null, null)
+            .map(q => q.object.value)
+            .filter(v => v.endsWith("_state"));
+        expect(statePaths).toHaveLength(3);
+        for (const statePath of statePaths) {
+            expect(statePath.startsWith(resolve("./state") + "/")).toBe(true);
+        }
     });
 });

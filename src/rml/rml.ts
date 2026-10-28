@@ -1,5 +1,5 @@
 import { Processor, type Reader, type Writer } from "@rdfc/js-runner";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { access, constants, readFile, unlink, writeFile } from "fs/promises";
 import {
     DataFactory,
@@ -86,6 +86,8 @@ export async function rmlMapper(
 
     const jarFile = await getJarFile(jarLocation);
     const mappingLocations: string[] = [];
+    // The declared logical targets that a void:dataDump of a mapping refers to
+    const matchedTargets = new Set<Target>();
 
     // Iterate over declared logical sources and organize them in a temporal location
     const sourceReaders: Promise<void>[] = [];
@@ -94,7 +96,6 @@ export async function rmlMapper(
             const filename = source.location.split("/").pop();
             source.newLocation = `/tmp/rml-${uid}-input-${randomUUID()}-${filename}`;
             source.hasData = false;
-            source.trigger = !!source.trigger;
 
             // Consume source updates while preserving sequential mapping executions.
             sourceReaders.push((async () => {
@@ -129,7 +130,7 @@ export async function rmlMapper(
     for await (const input of mappingReader.strings()) {
         logger.info(`[rmlMapper processor] Got mapping input!`);
         try {
-            const newMapping = transformMapping(input, logger, sources, targets);
+            const newMapping = transformMapping(input, logger, sources, targets, matchedTargets);
             // Create a hash from the mapping content to avoid async overwriting
             const hash = createHash("md5");
             const newLocation = `/tmp/rml-${uid}-mapping-${hash.update(input).digest("hex")}.ttl`;
@@ -144,6 +145,14 @@ export async function rmlMapper(
     }
 
     logger.info(`[rmlMapper processor] Received all mapping rules!`);
+    for (const target of targets ?? []) {
+        if (!matchedTargets.has(target)) {
+            logger.warn(
+                `[rmlMapper processor] rdfc:rmlTarget ${target.location} matches no void:dataDump in the mappings, ` +
+                `so its rdfc:output receives no RDF. It is compared as is: a relative IRI is resolved against the pipeline and no longer matches.`
+            );
+        }
+    }
     // We assume mappings to be static and only proceed to execute them once we have them all
     mappingsReady = true;
     if (sources) {
@@ -213,6 +222,7 @@ function transformMapping(
     logger: Logger,
     sources?: Source[],
     targets?: Target[],
+    matchedTargets?: Set<Target>,
 ): string {
     const quads = new Parser().parse(input);
     const store = new Store(quads);
@@ -246,6 +256,7 @@ function transformMapping(
                         `[rmlMapper processor] Moving location ${foundTarget.target.value} to ${target.newLocation}`
                     );
                     found = true;
+                    matchedTargets?.add(target);
                     // Remove the old location
                     store.removeQuad(
                         <Quad_Subject>foundTarget.subject,
@@ -490,9 +501,8 @@ async function executeMappings(
     for (let mappingFile of mappingLocations) {
         const t0 = new Date();
         logger.info(`[rmlMapper processor] Running ${mappingFile}`);
-        const command = `java -jar ${jarFile} -m ${mappingFile} -o ${outputFile}`;
-
-        const proc = exec(command);
+        // Without a shell, so a jar location with spaces stays one argument
+        const proc = execFile("java", ["-jar", jarFile, "-m", mappingFile, "-o", outputFile]);
         proc.stdout!.on("data", function (data) {
             logger.info(`[rmlMapper processor] rml mapper std: ${data.toString()}`);
         });
