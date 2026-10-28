@@ -24,6 +24,7 @@
   "license": "MIT",
   "dependencies": {
     "@rdfc/js-runner": "^3.4.0",
+    "@rdfc/utils-js": "^1.0.1",
     "@rdfjs/types": "^2.0.1",
     "@rmlio/yarrrml-parser": "^1.12.2",
     "@treecg/types": "^0.4.6",

@@ -3,11 +3,11 @@ import { FullProc } from "@rdfc/js-runner";
 import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
 import { RdfStore } from "rdf-stores";
 import { resolve } from "path";
-import { pathToFileURL } from "url";
 import { Parser } from "n3";
 import { RDF, RR, RML, RMLT, IDLAB_FN, AS, FNML, FNO, GREL } from "../src/voc";
 import { BASE, RML2IncRML, IncRMLConfig } from "../src/rml/incrml";
 import { TEST_LOGGER as logger, DF, readChannel } from "./utils";
+import { fromPath } from "@rdfc/utils-js";
 
 
 describe("Functional tests for the RML2IncRML processor", () => {
@@ -1269,7 +1269,7 @@ describe("Functional tests for the RML2IncRML processor", () => {
 
         // <./state> in a pipeline reaches the processor as a file: URL
         const config: IncRMLConfig = {
-            stateBasePath: pathToFileURL(resolve("./state")).href,
+            stateBasePath: fromPath("./state"),
             lifeCycleConfig: {
                 predicate: "http://ex.org/ns/lifeCycleProperty",
                 create: { function: IDLAB_FN.explicitCreate, type: AS.Create },
