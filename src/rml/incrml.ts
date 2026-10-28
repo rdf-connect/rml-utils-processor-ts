@@ -12,7 +12,7 @@ import {
 import { IDLAB_FN, LDES, RDF, RML, RR, FNO, FNML, RMLT, TREE, VOID, XSD, QL, GREL } from "../voc";
 import { Quad_Object } from "@rdfjs/types";
 import { Logger } from "winston";
-import { toPath } from "../util";
+import { toPath } from "@rdfc/utils-js";
 
 const { quad, namedNode, literal } = DataFactory;
 
