@@ -2,12 +2,12 @@ import { describe, expect, test } from "vitest";
 import { FullProc as ProcInstance, Processor } from "@rdfc/js-runner";
 import { ProcHelper } from "@rdfc/js-runner/lib/testUtils";
 import { resolve } from "path";
-import { pathToFileURL } from "url";
 import { rmSync, writeFileSync } from "fs";
-import { getJarFile, toPath } from "../src/util";
+import { getJarFile } from "../src/util";
 import { Yarrrml2RML } from "../src/yarrrml/yarrrml";
 import { RMLMapperJS } from "../src/rml/rml";
 import { RML2IncRML } from "../src/rml/incrml";
+import { fromPath } from "@rdfc/utils-js";
 
 describe("Tests for RML-related processors", async () => {
     async function getProc<T extends Processor<unknown>>(
@@ -88,7 +88,7 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.constructor.name).toBe(RML2IncRML.name);
         expect(proc.rmlStream.constructor.name).toBe("ReaderInstance");
         expect(proc.incrmlStream.constructor.name).toBe("WriterInstance");
-        expect(proc.config.stateBasePath).toBe(pathToFileURL(resolve("./state")).href);
+        expect(proc.config.stateBasePath).toBe(fromPath("./state"));
         expect(proc.config.lifeCycleConfig.predicate).toBe("http://ex.org/lifeCycleProp");
     });
 
@@ -126,19 +126,12 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.targets![0].location).toBe("file:///results/output.nq");
 
         const jar = resolve("./iri-test-rmlmapper.jar");
-        expect(proc.jarLocation).toBe(pathToFileURL(jar).href);
+        expect(proc.jarLocation).toBe(fromPath(jar));
         writeFileSync(jar, "");
         try {
             expect(await getJarFile(proc.jarLocation)).toBe(jar);
         } finally {
             rmSync(jar, { force: true });
         }
-    });
-
-    test("toPath keeps paths and turns file: URLs into paths", () => {
-        expect(toPath("./rmlmapper.jar")).toBe("./rmlmapper.jar");
-        expect(toPath("/tmp/state")).toBe("/tmp/state");
-        expect(toPath("https://example.org/rmlmapper.jar")).toBe("https://example.org/rmlmapper.jar");
-        expect(toPath("file:///tmp/my%20data/state")).toBe("/tmp/my data/state");
     });
 });
