@@ -1,14 +1,17 @@
 import { existsSync } from "fs";
 import { randomUUID as cryptoUUID } from "crypto";
-import { execFile } from "child_process";
+import { ChildProcess, execFile } from "child_process";
 import { toPath } from "@rdfc/utils-js";
 
-const DEFAULT_URL = "https://github.com/RMLio/rmlmapper-java/releases/download/v7.0.0/rmlmapper-7.0.0-r374-all.jar";
+const DEFAULT_URL =
+  "https://github.com/RMLio/rmlmapper-java/releases/download/v7.0.0/rmlmapper-7.0.0-r374-all.jar";
 const DEFAULT_LOCATION = "/tmp/rml-" + cryptoUUID() + ".jar";
 
 let rmlJarPromise: undefined | Promise<string> = undefined;
 
-export async function getJarFile(mLocation: string | undefined): Promise<string> {
+export async function getJarFile(
+  mLocation: string | undefined,
+): Promise<string> {
   let location;
   let url;
 
@@ -39,7 +42,7 @@ export async function getJarFile(mLocation: string | undefined): Promise<string>
       // Without a shell, so a location with spaces stays one argument
       console.log("Executing $ wget", url, "-O", location);
       const proc = execFile("wget", [url, "-O", location]);
-      await new Promise(res => proc.once("exit", res));
+      await awaitProc(proc);
       return location;
     })();
   }
@@ -47,9 +50,20 @@ export async function getJarFile(mLocation: string | undefined): Promise<string>
   return rmlJarPromise;
 }
 
+export function awaitProc(proc: ChildProcess): Promise<void> {
+  return new Promise((res, rej) => {
+    proc.once("error", rej);
+    proc.once("close", (code) => {
+      if (code === 0) res();
+      else rej(new Error(`process failed with exit code ${code}`));
+    });
+  });
+}
+
 export function randomUUID(length = 8) {
   // declare all characters
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
