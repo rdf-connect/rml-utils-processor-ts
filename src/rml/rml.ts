@@ -11,7 +11,7 @@ import {
     Writer as N3Writer,
 } from "n3";
 import { createHash } from "crypto";
-import { randomUUID, getJarFile } from "../util";
+import { randomUUID, getJarFile, awaitProc } from "../util";
 import { Cont, empty, match, pred, subject } from "rdf-lens";
 import { RDF } from "@treecg/types";
 import { RML, RMLT, VOID, IDLAB_FN, RR } from "../voc";
@@ -509,7 +509,8 @@ async function executeMappings(
         proc.stderr!.on("data", function (data) {
             logger.error(`[rmlMapper processor] rml mapper err: ${data.toString()}`);
         });
-        await new Promise((res) => proc.on("exit", res));
+
+        await awaitProc(proc);
 
         if (targets) {
             for (let target of targets) {
