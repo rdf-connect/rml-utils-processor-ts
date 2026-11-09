@@ -156,38 +156,42 @@ export async function rmlMapper(
     // We assume mappings to be static and only proceed to execute them once we have them all
     mappingsReady = true;
     if (sources) {
-        if (sources.every((s) => s.hasData)) {
-            // We made sure that all declared logical sources are present
-            logger.info(`[rmlMapper processor] Start mapping now (on end mappings event)`);
-            await executeMappings(
-                mappingLocations,
-                jarFile,
-                outputFile,
-                defaultWriter, 
-                logger, 
-                sources, 
-                targets
-            );
-            // Check for buffered input updates
-            for (const source of sources) {
-                if (source.sourceBuffer && source.sourceBuffer.length > 0) {
-                    const update = source.sourceBuffer.shift();
-                    if (update) {
-                        await handleDataUpdate(
-                            update,
-                            mappingsReady,
-                            sources,
-                            targets,
-                            mappingLocations,
-                            jarFile,
-                            outputFile,
-                            defaultWriter,
-                            logger
-                        );
+        // Queued with the source updates, as overlapping runs would share their input and output files
+        executing = executing.then(async () => {
+            if (sources.every((s) => s.hasData)) {
+                // We made sure that all declared logical sources are present
+                logger.info(`[rmlMapper processor] Start mapping now (on end mappings event)`);
+                await executeMappings(
+                    mappingLocations,
+                    jarFile,
+                    outputFile,
+                    defaultWriter,
+                    logger,
+                    sources,
+                    targets
+                );
+                // Check for buffered input updates
+                for (const source of sources) {
+                    if (source.sourceBuffer && source.sourceBuffer.length > 0) {
+                        const update = source.sourceBuffer.shift();
+                        if (update) {
+                            await handleDataUpdate(
+                                update,
+                                mappingsReady,
+                                sources,
+                                targets,
+                                mappingLocations,
+                                jarFile,
+                                outputFile,
+                                defaultWriter,
+                                logger
+                            );
+                        }
                     }
                 }
             }
-        }
+        });
+        await executing;
 
         await Promise.all(sourceReaders);
         await executing;

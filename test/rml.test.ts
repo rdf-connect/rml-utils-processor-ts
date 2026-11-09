@@ -807,6 +807,78 @@ describe("Functional tests for the RMLMapperJS processor", () => {
                 DF.namedNode("http://example.org/myNamedGraph")).length
             ).toBe(1);
         }
+    }, 30000); // Three rounds of two java runs
+
+    test("Mapping runs do not overlap when source data arrives during a run", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_TARGET()}
+        `;
+        const runner = createRunner();
+
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: true
+            }
+        ];
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                writer: targetOutputStream,
+                data: ""
+            }
+        ];
+
+        const targetOut = readChannel(targetOutput);
+        const info = vi.spyOn(logger, "info");
+
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        try {
+            await proc.init();
+            const transformPromise = proc.transform();
+
+            await sourceInput.string(LOCAL_RAW_DATA);
+            await rmlInput.string(rmlDoc);
+            await rmlInput.close();
+
+            // Only update the source once the run started by the end of the mappings is going
+            await vi.waitFor(() => expect(info).toHaveBeenCalledWith(expect.stringContaining("Running")));
+            await sourceInput.string(LOCAL_RAW_DATA_UPDATE);
+            await sourceInput.close();
+            await transformPromise;
+
+            const steps = info.mock.calls
+                .map(([message]) => String(message))
+                .filter((message) => /\] (Running|Done) /.test(message))
+                .map((message) => (message.includes("] Running ") ? "start" : "end"));
+            expect(steps).toEqual(["start", "end", "start", "end"]);
+
+            const outputs = await targetOut;
+            expect(outputs.length).toBe(2);
+            for (const output of outputs) {
+                expect(new Parser().parse(output).length).toBe(4);
+            }
+        } finally {
+            info.mockRestore();
+        }
     });
 
     test("Mapping process without any declared logical sources and using default output", async () => {
