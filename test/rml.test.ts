@@ -1,4 +1,4 @@
-import { describe, test, expect, afterAll, beforeAll } from "vitest";
+import { describe, test, expect, afterAll, beforeAll, vi } from "vitest";
 import { FullProc } from "@rdfc/js-runner";
 import { channel, createRunner } from "@rdfc/js-runner/lib/testUtils";
 import { Parser } from "n3";
@@ -472,6 +472,78 @@ describe("Functional tests for the RMLMapperJS processor", () => {
         ).toBe(1);
     });
 
+    test("Mapping process warns about a declared logical target that no void:dataDump matches", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_TARGET()}
+        `;
+        const runner = createRunner();
+
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream, defaultOutput] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [otherOutputStream, otherOutput] = channel(runner, "otherOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: false
+            }
+        ];
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                writer: targetOutputStream,
+                data: ""
+            },
+            {
+                // A relative IRI, resolved against the pipeline, as the mapping does not write it
+                location: "file:///home/me/pipeline/results/output.nq",
+                writer: otherOutputStream,
+                data: ""
+            }
+        ];
+
+        const targetOut = readChannel(targetOutput);
+        const otherOut = readChannel(otherOutput);
+        readChannel(defaultOutput);
+        const warn = vi.spyOn(logger, "warn");
+
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        try {
+            await proc.init();
+            const transformPromise = proc.transform();
+
+            await rmlInput.string(rmlDoc);
+            await rmlInput.close();
+            await sourceInput.string(LOCAL_RAW_DATA);
+            await sourceInput.close();
+            await transformPromise;
+
+            const warnings = warn.mock.calls.map(([message]) => String(message));
+            expect(warnings.filter((m) => m.includes("matches no void:dataDump"))).toEqual([
+                expect.stringContaining("rdfc:rmlTarget file:///home/me/pipeline/results/output.nq "),
+            ]);
+            expect((await targetOut).length).toBeGreaterThan(0);
+            expect((await otherOut).join("").trim()).toBe("");
+        } finally {
+            warn.mockRestore();
+        }
+    });
+
     test("Mapping process with declared logical source and LDES target", async () => {
         const rmlDoc = `
             ${PREFIXES}
@@ -734,6 +806,78 @@ describe("Functional tests for the RMLMapperJS processor", () => {
                 null,
                 DF.namedNode("http://example.org/myNamedGraph")).length
             ).toBe(1);
+        }
+    }, 30000); // Three rounds of two java runs
+
+    test("Mapping runs do not overlap when source data arrives during a run", async () => {
+        const rmlDoc = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_TARGET()}
+        `;
+        const runner = createRunner();
+
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput, sourceInputStream] = channel(runner, "dataInput");
+
+        const sources: Source[] = [
+            {
+                location: "dataset/data.xml",
+                dataInput: sourceInputStream,
+                hasData: false,
+                trigger: true
+            }
+        ];
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                writer: targetOutputStream,
+                data: ""
+            }
+        ];
+
+        const targetOut = readChannel(targetOutput);
+        const info = vi.spyOn(logger, "info");
+
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        try {
+            await proc.init();
+            const transformPromise = proc.transform();
+
+            await sourceInput.string(LOCAL_RAW_DATA);
+            await rmlInput.string(rmlDoc);
+            await rmlInput.close();
+
+            // Only update the source once the run started by the end of the mappings is going
+            await vi.waitFor(() => expect(info).toHaveBeenCalledWith(expect.stringContaining("Running")));
+            await sourceInput.string(LOCAL_RAW_DATA_UPDATE);
+            await sourceInput.close();
+            await transformPromise;
+
+            const steps = info.mock.calls
+                .map(([message]) => String(message))
+                .filter((message) => /\] (Running|Done) /.test(message))
+                .map((message) => (message.includes("] Running ") ? "start" : "end"));
+            expect(steps).toEqual(["start", "end", "start", "end"]);
+
+            const outputs = await targetOut;
+            expect(outputs.length).toBe(2);
+            for (const output of outputs) {
+                expect(new Parser().parse(output).length).toBe(4);
+            }
+        } finally {
+            info.mockRestore();
         }
     });
 

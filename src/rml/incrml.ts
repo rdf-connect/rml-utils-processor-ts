@@ -12,6 +12,7 @@ import {
 import { IDLAB_FN, LDES, RDF, RML, RR, FNO, FNML, RMLT, TREE, VOID, XSD, QL, GREL } from "../voc";
 import { Quad_Object } from "@rdfjs/types";
 import { Logger } from "winston";
+import { toPath } from "@rdfc/utils-js";
 
 const { quad, namedNode, literal } = DataFactory;
 
@@ -156,7 +157,7 @@ function expand2IncRML(rmlQuads: Quad[], config: IncRMLConfig, logger: Logger): 
                                 logSrcObj: logSrcObj._subject,
                                 graphMapObj: graphMapObj._subject,
                                 triplesMaps: graphMapObj.triplesMaps,
-                                stateBasePath: config.stateBasePath,
+                                stateBasePath: toPath(config.stateBasePath),
                                 counter
                             },
                             rmlStore,
