@@ -147,38 +147,42 @@ export async function rmlMapper(
     // We assume mappings to be static and only proceed to execute them once we have them all
     mappingsReady = true;
     if (sources) {
-        if (sources.every((s) => s.hasData)) {
-            // We made sure that all declared logical sources are present
-            logger.info(`[rmlMapper processor] Start mapping now (on end mappings event)`);
-            await executeMappings(
-                mappingLocations,
-                jarFile,
-                outputFile,
-                defaultWriter, 
-                logger, 
-                sources, 
-                targets
-            );
-            // Check for buffered input updates
-            for (const source of sources) {
-                if (source.sourceBuffer && source.sourceBuffer.length > 0) {
-                    const update = source.sourceBuffer.shift();
-                    if (update) {
-                        await handleDataUpdate(
-                            update,
-                            mappingsReady,
-                            sources,
-                            targets,
-                            mappingLocations,
-                            jarFile,
-                            outputFile,
-                            defaultWriter,
-                            logger
-                        );
+        // Queue behind pending source updates so that mapping runs never overlap,
+        // as they share the same temporary source, target and output files.
+        executing = executing.then(async () => {
+            if (sources.every((s) => s.hasData)) {
+                // We made sure that all declared logical sources are present
+                logger.info(`[rmlMapper processor] Start mapping now (on end mappings event)`);
+                await executeMappings(
+                    mappingLocations,
+                    jarFile,
+                    outputFile,
+                    defaultWriter,
+                    logger,
+                    sources,
+                    targets
+                );
+                // Check for buffered input updates
+                for (const source of sources) {
+                    if (source.sourceBuffer && source.sourceBuffer.length > 0) {
+                        const update = source.sourceBuffer.shift();
+                        if (update) {
+                            await handleDataUpdate(
+                                update,
+                                mappingsReady,
+                                sources,
+                                targets,
+                                mappingLocations,
+                                jarFile,
+                                outputFile,
+                                defaultWriter,
+                                logger
+                            );
+                        }
                     }
                 }
             }
-        }
+        });
 
         await Promise.all(sourceReaders);
         await executing;
@@ -525,7 +529,7 @@ async function executeMappings(
 
     logger.info(`[rmlMapper processor] All done`);
     if (targets) {
-        targets.forEach(async target => {
+        for (const target of targets) {
             // Account for the possibility that a declared target and the default target are the same.
             // This is important to make sure that all produced triples/quads are pushed downstream together.
             if (target.writer === defaultWriter) {
@@ -533,7 +537,7 @@ async function executeMappings(
             } else {
                 await target.writer.string(target.data);
             }
-        });
+        }
     }
     if (out !== "") {
         await defaultWriter.string(out);
