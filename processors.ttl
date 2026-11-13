@@ -4,11 +4,10 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix : <https://w3id.org/conn#>.
 @prefix sh: <http://www.w3.org/ns/shacl#>.
-@prefix dc: <http://purl.org/dc/terms/>.
 
 rdfc:Yarrrml2RML a owl:Class, rdfs:Class;
-  dc:title "yarrrml processor";
-  dc:description "The YARRRML processor transforms YARRRML documents into RML mapping documents.";
+  rdfs:label "YARRRML to RML Transformer";
+  rdfs:comment "Transforms YARRRML mapping documents into RML mapping documents.";
   rdfc:jsImplementationOf rdfc:Processor;
   rdfc:file <./lib/yarrrml/yarrrml.js>;
   rdfc:class "Yarrrml2RML";
@@ -35,8 +34,8 @@ rdfc:Yarrrml2RML a owl:Class, rdfs:Class;
   ].
 
 rdfc:RMLMapperJS a owl:Class, rdfs:Class;
-  dc:title "RMLMapperJS processor";
-  dc:description "The RMLMapperJS processor wraps the Java RMLMapper to produce RDF data based on RML mappings.";
+  rdfs:label "RML Mapper Processor";
+  rdfs:comment "Executes RML mapping documents with the Java RMLMapper, and streams the produced RDF to RDF-Connect channels.";
   rdfc:jsImplementationOf rdfc:Processor;
   rdfc:file <./lib/rml/rml.js>;
   rdfc:class "RMLMapperJS";
@@ -142,9 +141,9 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:maxCount 1;
   ].
 
-rdfc:IncRMLTransformer a rdfc:Processor;
-  dc:title "Incremental RML processor";
-  dc:description "The Incremental RML processor transforms a stream of RML mapping documents into corresponding Incremental RML documents.";
+rdfc:IncRMLTransformer a owl:Class, rdfs:Class;
+  rdfs:label "Incremental RML Transformer";
+  rdfs:comment "Transforms a stream of RML mapping documents into Incremental RML (IncRML) mapping documents.";
   rdfc:jsImplementationOf rdfc:Processor;
   rdfc:file <./lib/rml/incrml.js>;
   rdfc:class "RML2IncRML";
