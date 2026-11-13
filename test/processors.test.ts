@@ -49,7 +49,7 @@ describe("Tests for RML-related processors", async () => {
     test("rdfcp:RMLMapperJS is properly defined", async () => {
         const proc = await getProc<RMLMapperJS>(
             `<http://example.com/ns#processor> a rdfcp:RMLMapperJS;
-                rdfcp:mappings <reader>;
+                rdfcp:input <reader>;
                 rdfcp:output <writer>.`,
             "RMLMapperJS",
         );
@@ -62,7 +62,7 @@ describe("Tests for RML-related processors", async () => {
     test("rdfcp:IncRMLTransformer is properly defined", async () => {
         const proc = await getProc<RML2IncRML>(
             `<http://example.com/ns#processor> a rdfcp:IncRMLTransformer;
-                rdfcp:rmlStream <reader>;
+                rdfcp:input <reader>;
                 rdfcp:config [
                     rdfcp:stateBasePath <./state>;
                     rdfcp:lifeCycleConfig [
@@ -81,7 +81,7 @@ describe("Tests for RML-related processors", async () => {
                         ]
                     ]
                 ];
-                rdfcp:incrmlStream <writer>.`,
+                rdfcp:output <writer>.`,
             "IncRMLTransformer",
         );
 
@@ -95,7 +95,7 @@ describe("Tests for RML-related processors", async () => {
     test("rdfcp:RMLMapperJS falls back to its default values", async () => {
         const proc = await getProc<RMLMapperJS>(
             `<http://example.com/ns#processor> a rdfcp:RMLMapperJS;
-                rdfcp:mappings <reader>;
+                rdfcp:input <reader>;
                 rdfcp:output <writer>;
                 rdfcp:rmlSource [
                     rdfcp:sourceLocation "dataset/data.xml";
@@ -112,7 +112,7 @@ describe("Tests for RML-related processors", async () => {
     test("rdfcp:RMLMapperJS takes its jar and target locations written as IRIs", async () => {
         const proc = await getProc<RMLMapperJS>(
             `<http://example.com/ns#processor> a rdfcp:RMLMapperJS;
-                rdfcp:mappings <reader>;
+                rdfcp:input <reader>;
                 rdfcp:output <writer>;
                 rdfcp:rmlTarget [
                     rdfcp:targetLocation <file:///results/output.nq>;
