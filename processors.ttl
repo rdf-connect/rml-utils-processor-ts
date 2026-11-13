@@ -102,7 +102,7 @@ rdfcp:RMLMapperJS a owl:Class, rdfs:Class;
 [ ] a sh:NodeShape;
   sh:targetClass rdfcp:RMLMapperJS;
   sh:property [
-    sh:path rdfcp:mappings;
+    sh:path rdfcp:input;
     sh:codeIdentifier "mappingInput";
     sh:name "Input channel";
     sh:description "Input channel that streams RML mapping documents.";
@@ -153,7 +153,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
 [ ] a sh:NodeShape;
   sh:targetClass rdfcp:IncRMLTransformer;
   sh:property [
-    sh:path rdfcp:rmlStream;
+    sh:path rdfcp:input;
     sh:codeIdentifier "rmlStream";
     sh:name "Input channel";
     sh:description "Input channel that streams RML mapping documents.";
@@ -169,7 +169,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
-    sh:path rdfcp:incrmlStream;
+    sh:path rdfcp:output;
     sh:codeIdentifier "incrmlStream";
     sh:name "Output channel";
     sh:description "Output channel that receives the IncRML mapping documents.";
