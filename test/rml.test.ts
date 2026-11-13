@@ -737,6 +737,93 @@ describe("Functional tests for the RMLMapperJS processor", () => {
         }
     });
 
+    test("Mapping process with data updates arriving while the final mapping run executes", async () => {
+        const rmlDoc1 = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_TARGET("dataset/data1.xml")}
+        `;
+        const rmlDoc2 = `
+            ${PREFIXES}
+            ${RML_TM_LOCAL_SOURCE_AND_TARGET("dataset/data2.xml")}
+        `;
+        const runner = createRunner();
+
+        // Define function parameters
+        const [rmlInput, mappingReader] = channel(runner, "rml");
+        const [defaultOutputStream] = channel(runner, "defaultOutput");
+        const [targetOutputStream, targetOutput] = channel(runner, "targetOutput");
+        const [sourceInput1, sourceInputStream1] = channel(runner, "dataInput1");
+        const [sourceInput2, sourceInputStream2] = channel(runner, "dataInput2");
+
+        const sources: Source[] = [
+            {
+                location: "dataset/data1.xml",
+                dataInput: sourceInputStream1,
+                hasData: false,
+                trigger: true
+            },
+            {
+                location: "dataset/data2.xml",
+                dataInput: sourceInputStream2,
+                hasData: false,
+                trigger: true
+            }
+        ];
+        const targets: Target[] = [
+            {
+                location: "file:///results/output.nq",
+                writer: targetOutputStream,
+                data: ""
+            }
+        ];
+
+        // Channel reader for the target output
+        const targetOut = readChannel(targetOutput);
+
+        // Define processor instance
+        const proc = <FullProc<RMLMapperJS>>new RMLMapperJS(
+            {
+                mappingInput: mappingReader,
+                defaultWriter: defaultOutputStream,
+                sources,
+                targets,
+                jarLocation: "/tmp/rmlMapper.jar"
+            },
+            logger
+        );
+
+        // Execute processor
+        await proc.init();
+        const transformPromise = proc.transform();
+
+        // Push initial data for both sources, then all mappings
+        await sourceInput1.string(LOCAL_RAW_DATA);
+        await sourceInput2.string(LOCAL_RAW_DATA);
+        await rmlInput.string(rmlDoc1);
+        await rmlInput.string(rmlDoc2);
+        await rmlInput.close();
+
+        // Push updates right away, while the mapping run started by closing the mappings is still executing
+        await sourceInput1.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput2.string(LOCAL_RAW_DATA_UPDATE);
+        await sourceInput1.close();
+        await sourceInput2.close();
+
+        // Wait for mappings to be processed
+        await transformPromise;
+
+        // Expect one complete emission for the initial data, followed by one for the updates
+        const outputs = await targetOut;
+        expect(outputs.length).toBe(2);
+        const labels = outputs.map(output => {
+            const store = RdfStore.createDefault();
+            new Parser().parse(output).forEach(quad => store.addQuad(quad));
+            return store.getQuads(null, RDFS.terms.label, null, null).map(q => q.object.value).sort();
+        });
+        expect(labels[0]).toEqual(["some data", "some other data"]);
+        expect(labels[1]).toEqual(["some new data", "some other new data"]);
+    }, 30000);
+
     test("Mapping process without any declared logical sources and using default output", async () => {
         const rmlDoc = `
             ${PREFIXES}
