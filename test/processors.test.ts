@@ -20,7 +20,7 @@ describe("Tests for RML-related processors", async () => {
         await helper.importFile(resolve("./processors.ttl"));
         await helper.importInline(
             resolve("pipeline.ttl"),
-            "@prefix rdfc: <https://w3id.org/rdf-connect#>." + config,
+            "@prefix rdfc: <https://w3id.org/rdf-connect#>. @prefix rdfcp: <https://w3id.org/rdf-connect/processors#>." + config,
         );
         const definedConfig = helper.getConfig(ty);
 
@@ -33,11 +33,11 @@ describe("Tests for RML-related processors", async () => {
         return processor;
     }
 
-    test("rdfc:Yarrrml2RML is properly defined", async () => {
+    test("rdfcp:Yarrrml2RML is properly defined", async () => {
         const proc = await getProc<Yarrrml2RML>(
-            `<http://example.com/ns#processor> a rdfc:Yarrrml2RML;
-                rdfc:input <reader>;
-                rdfc:output <writer>.`,
+            `<http://example.com/ns#processor> a rdfcp:Yarrrml2RML;
+                rdfcp:input <reader>;
+                rdfcp:output <writer>.`,
             "Yarrrml2RML",
         );
 
@@ -46,11 +46,11 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.writer.constructor.name).toBe("WriterInstance");
     });
 
-    test("rdfc:RMLMapperJS is properly defined", async () => {
+    test("rdfcp:RMLMapperJS is properly defined", async () => {
         const proc = await getProc<RMLMapperJS>(
-            `<http://example.com/ns#processor> a rdfc:RMLMapperJS;
-                rdfc:mappings <reader>;
-                rdfc:output <writer>.`,
+            `<http://example.com/ns#processor> a rdfcp:RMLMapperJS;
+                rdfcp:mappings <reader>;
+                rdfcp:output <writer>.`,
             "RMLMapperJS",
         );
 
@@ -59,29 +59,29 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.defaultWriter.constructor.name).toBe("WriterInstance");
     });
 
-    test("rdfc:IncRMLTransformer is properly defined", async () => {
+    test("rdfcp:IncRMLTransformer is properly defined", async () => {
         const proc = await getProc<RML2IncRML>(
-            `<http://example.com/ns#processor> a rdfc:IncRMLTransformer;
-                rdfc:rmlStream <reader>;
-                rdfc:config [
-                    rdfc:stateBasePath <./state>;
-                    rdfc:lifeCycleConfig [
-                        rdfc:predicate <http://ex.org/lifeCycleProp>;
-                        rdfc:create [
-                            rdfc:function <https://w3id.org/imec/idlab/function#explicitCreate>;
-                            rdfc:type <https://www.w3.org/ns/activitystreams#Create>
+            `<http://example.com/ns#processor> a rdfcp:IncRMLTransformer;
+                rdfcp:rmlStream <reader>;
+                rdfcp:config [
+                    rdfcp:stateBasePath <./state>;
+                    rdfcp:lifeCycleConfig [
+                        rdfcp:predicate <http://ex.org/lifeCycleProp>;
+                        rdfcp:create [
+                            rdfcp:function <https://w3id.org/imec/idlab/function#explicitCreate>;
+                            rdfcp:type <https://www.w3.org/ns/activitystreams#Create>
                         ];
-                        rdfc:update [
-                            rdfc:function <https://w3id.org/imec/idlab/function#implicitUpdate>;
-                            rdfc:type <https://www.w3.org/ns/activitystreams#Update>
+                        rdfcp:update [
+                            rdfcp:function <https://w3id.org/imec/idlab/function#implicitUpdate>;
+                            rdfcp:type <https://www.w3.org/ns/activitystreams#Update>
                         ];
-                        rdfc:delete [
-                            rdfc:function <https://w3id.org/imec/idlab/function#implicitDelete>;
-                            rdfc:type <https://www.w3.org/ns/activitystreams#Delete>
+                        rdfcp:delete [
+                            rdfcp:function <https://w3id.org/imec/idlab/function#implicitDelete>;
+                            rdfcp:type <https://www.w3.org/ns/activitystreams#Delete>
                         ]
                     ]
                 ];
-                rdfc:incrmlStream <writer>.`,
+                rdfcp:incrmlStream <writer>.`,
             "IncRMLTransformer",
         );
 
@@ -92,14 +92,14 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.config.lifeCycleConfig.predicate).toBe("http://ex.org/lifeCycleProp");
     });
 
-    test("rdfc:RMLMapperJS falls back to its default values", async () => {
+    test("rdfcp:RMLMapperJS falls back to its default values", async () => {
         const proc = await getProc<RMLMapperJS>(
-            `<http://example.com/ns#processor> a rdfc:RMLMapperJS;
-                rdfc:mappings <reader>;
-                rdfc:output <writer>;
-                rdfc:rmlSource [
-                    rdfc:sourceLocation "dataset/data.xml";
-                    rdfc:input <sourceReader>
+            `<http://example.com/ns#processor> a rdfcp:RMLMapperJS;
+                rdfcp:mappings <reader>;
+                rdfcp:output <writer>;
+                rdfcp:rmlSource [
+                    rdfcp:sourceLocation "dataset/data.xml";
+                    rdfcp:input <sourceReader>
                 ].`,
             "RMLMapperJS",
         );
@@ -109,16 +109,16 @@ describe("Tests for RML-related processors", async () => {
         expect(proc.sources![0].trigger).toBe(false);
     });
 
-    test("rdfc:RMLMapperJS takes its jar and target locations written as IRIs", async () => {
+    test("rdfcp:RMLMapperJS takes its jar and target locations written as IRIs", async () => {
         const proc = await getProc<RMLMapperJS>(
-            `<http://example.com/ns#processor> a rdfc:RMLMapperJS;
-                rdfc:mappings <reader>;
-                rdfc:output <writer>;
-                rdfc:rmlTarget [
-                    rdfc:targetLocation <file:///results/output.nq>;
-                    rdfc:output <targetWriter>
+            `<http://example.com/ns#processor> a rdfcp:RMLMapperJS;
+                rdfcp:mappings <reader>;
+                rdfcp:output <writer>;
+                rdfcp:rmlTarget [
+                    rdfcp:targetLocation <file:///results/output.nq>;
+                    rdfcp:output <targetWriter>
                 ];
-                rdfc:rmlJar <./iri-test-rmlmapper.jar>.`,
+                rdfcp:rmlJar <./iri-test-rmlmapper.jar>.`,
             "RMLMapperJS",
         );
 

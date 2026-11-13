@@ -153,8 +153,8 @@ export async function rmlMapper(
     for (const target of targets ?? []) {
         if (!matchedTargets.has(target)) {
             logger.warn(
-                `[rmlMapper processor] rdfc:rmlTarget ${target.location} matches no void:dataDump in the mappings, ` +
-                `so its rdfc:output receives no RDF. It is compared as is: a relative IRI is resolved against the pipeline and no longer matches.`
+                `[rmlMapper processor] rdfcp:rmlTarget ${target.location} matches no void:dataDump in the mappings, ` +
+                `so its rdfcp:output receives no RDF. It is compared as is: a relative IRI is resolved against the pipeline and no longer matches.`
             );
         }
     }
