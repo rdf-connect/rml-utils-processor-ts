@@ -23,6 +23,7 @@ rdfc:Yarrrml2RML a owl:Class, rdfs:Class;
     sh:minCount 1;
     sh:codeIdentifier "reader";
     sh:name "Input channel";
+    sh:description "Input channel that streams YARRRML mapping documents as strings.";
   ], [
     sh:class rdfc:Writer;
     sh:path rdfc:output;
@@ -30,6 +31,7 @@ rdfc:Yarrrml2RML a owl:Class, rdfs:Class;
     sh:minCount 1;
     sh:codeIdentifier "writer";
     sh:name "Output channel";
+    sh:description "Output channel that receives the generated RML mapping documents.";
   ].
 
 rdfc:RMLMapperJS a owl:Class, rdfs:Class;
@@ -47,6 +49,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:datatype xsd:string;
     sh:codeIdentifier "location";
     sh:name "Source location";
+    sh:description "Source location as referenced by rml:source in the mapping documents.";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
@@ -54,6 +57,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:class rdfc:Reader;
     sh:codeIdentifier "dataInput";
     sh:name "Input channel";
+    sh:description "Input channel that provides the source data.";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
@@ -61,6 +65,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:datatype xsd:boolean;
     sh:codeIdentifier "trigger";
     sh:name "Trigger";
+    sh:description "Whether new data on this source triggers another execution of the mappings; default is false.";
     sh:defaultValue false;
     sh:maxCount 1;
   ], [
@@ -68,6 +73,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:datatype xsd:string;
     sh:codeIdentifier "incRMLStateIndex";
     sh:name "IncRML state index";
+    sh:description "Regular expression matched against incoming data, whose first capture group is appended to the IncRML state paths, so independent datasets on the same logical source keep separate state.";
     sh:minCount 0;
     sh:maxCount 1;
   ].
@@ -80,6 +86,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:codeType xsd:string;
     sh:codeIdentifier "location";
     sh:name "Target location";
+    sh:description "Target location as referenced by void:dataDump in the mapping documents. It is compared as is, so an IRI must be absolute.";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
@@ -87,6 +94,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:class rdfc:Writer;
     sh:codeIdentifier "writer";
     sh:name "Output channel";
+    sh:description "Output channel that receives the RDF written to this logical target.";
     sh:maxCount 1;
     sh:minCount 1;
   ].
@@ -97,6 +105,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:path rdfc:mappings;
     sh:codeIdentifier "mappingInput";
     sh:name "Input channel";
+    sh:description "Input channel that streams RML mapping documents.";
     sh:class rdfc:Reader;
     sh:minCount 1;
     sh:maxCount 1;
@@ -104,6 +113,7 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:path rdfc:output;
     sh:codeIdentifier "defaultWriter";
     sh:name "Output channel";
+    sh:description "Default output channel for the RDF produced by mappings without an explicit logical target.";
     sh:class rdfc:Writer;
     sh:minCount 1;
     sh:maxCount 1;
@@ -111,18 +121,21 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:path rdfc:rmlSource;
     sh:codeIdentifier "sources";
     sh:name "Logical sources";
+    sh:description "Logical sources managed by RDF-Connect, written to temporary files and matched against rml:source in the mapping documents.";
     sh:class rdfc:RmlSource;
     sh:minCount 0;
   ], [
     sh:path rdfc:rmlTarget;
     sh:codeIdentifier "targets";
     sh:name "Logical targets";
+    sh:description "Logical targets managed by RDF-Connect, matched against void:dataDump in the logical targets of the mapping documents.";
     sh:class rdfc:RmlTarget;
     sh:minCount 0;
   ], [
     sh:path rdfc:rmlJar;
     sh:codeIdentifier "jarLocation";
     sh:name "RMLMapper jar";
+    sh:description "Path or URL of an RMLMapper jar; if omitted, the default RMLMapper release is downloaded to /tmp and reused.";
     sh:nodeKind sh:IRIOrLiteral;
     sh:codeType xsd:string;
     sh:minCount 0;
@@ -143,6 +156,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:path rdfc:rmlStream;
     sh:codeIdentifier "rmlStream";
     sh:name "Input channel";
+    sh:description "Input channel that streams RML mapping documents.";
     sh:class rdfc:Reader;
     sh:minCount 1;
     sh:maxCount 1
@@ -150,6 +164,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:path rdfc:config;
     sh:codeIdentifier "config";
     sh:name "Configuration";
+    sh:description "IncRML transformation configuration.";
     sh:class rdfc:IncRMLConfig;
     sh:minCount 1;
     sh:maxCount 1;
@@ -157,6 +172,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:path rdfc:incrmlStream;
     sh:codeIdentifier "incrmlStream";
     sh:name "Output channel";
+    sh:description "Output channel that receives the IncRML mapping documents.";
     sh:class rdfc:Writer;
     sh:minCount 1;
     sh:maxCount 1
@@ -170,6 +186,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:codeType xsd:string;
     sh:codeIdentifier "stateBasePath";
     sh:name "State base path";
+    sh:description "Base path of the generated IncRML state files.";
     sh:maxCount 1;
     sh:minCount 1
   ], [
@@ -177,6 +194,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:class rdfc:LifeCycleConfig;
     sh:codeIdentifier "lifeCycleConfig";
     sh:name "Life cycle configuration";
+    sh:description "Life cycle predicate, and the function and RDF type of the create, update and delete events.";
     sh:maxCount 1;
     sh:minCount 1
   ], [
@@ -184,6 +202,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:class rdfc:LDESTargetConfig;
     sh:codeIdentifier "targetConfig";
     sh:name "LDES target configuration";
+    sh:description "LDES logical target to generate, with LDES metadata and unique immutable IRIs.";
     sh:minCount 0;
     sh:maxCount 1
   ].
@@ -195,6 +214,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "predicate";
     sh:name "Life cycle predicate";
+    sh:description "Predicate that describes the life cycle event type.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -202,6 +222,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:class rdfc:EventConfig;
     sh:codeIdentifier "create";
     sh:name "Create event";
+    sh:description "Function and RDF type of create events.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -209,6 +230,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:class rdfc:EventConfig;
     sh:codeIdentifier "update";
     sh:name "Update event";
+    sh:description "Function and RDF type of update events.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -216,6 +238,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:class rdfc:EventConfig;
     sh:codeIdentifier "delete";
     sh:name "Delete event";
+    sh:description "Function and RDF type of delete events.";
     sh:minCount 1;
     sh:maxCount 1
   ].
@@ -227,6 +250,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "function";
     sh:name "Function";
+    sh:description "IRI of the FnO function used for the event.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -234,6 +258,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "type";
     sh:name "Event type";
+    sh:description "IRI of the RDF type emitted for the event.";
     sh:minCount 1;
     sh:maxCount 1
   ].
@@ -245,6 +270,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "targetPath";
     sh:name "Target path";
+    sh:description "Output path of the generated logical target.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -252,6 +278,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "timestampPath";
     sh:name "Timestamp path";
+    sh:description "LDES timestamp path.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -259,6 +286,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "versionOfPath";
     sh:name "Version-of path";
+    sh:description "LDES version-of path.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
@@ -266,12 +294,14 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "serialization";
     sh:name "Serialization";
+    sh:description "IRI of the RML target serialization, such as formats:N-Triples.";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:uniqueIRIs;
     sh:codeIdentifier "uniqueIRIs";
     sh:name "Unique IRIs";
+    sh:description "Whether the generated LDES members get unique immutable IRIs.";
     sh:datatype xsd:boolean;
     sh:minCount 1;
     sh:maxCount 1
@@ -280,6 +310,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "ldesBaseIRI";
     sh:name "LDES base IRI";
+    sh:description "Base IRI of the generated LDES.";
     sh:minCount 0;
     sh:maxCount 1
   ], [
@@ -287,6 +318,7 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:datatype xsd:string;
     sh:codeIdentifier "shape";
     sh:name "Shape";
+    sh:description "IRI of the TREE shape of the generated LDES.";
     sh:minCount 0;
     sh:maxCount 1
   ].
