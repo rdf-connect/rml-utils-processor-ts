@@ -128,25 +128,25 @@ An optional LDES target configuration can be provided to generate LDES metadata 
 
 **`rdfcp:LifeCycleConfig` parameters:**
 
-- `rdfcp:predicate` (`string`, required): Predicate used to describe the lifecycle event type.
+- `rdfcp:predicate` (`string` or IRI, required): Predicate used to describe the lifecycle event type.
 - `rdfcp:create` (`rdfcp:EventConfig`, required): Function and RDF type for create events.
 - `rdfcp:update` (`rdfcp:EventConfig`, required): Function and RDF type for update events.
 - `rdfcp:delete` (`rdfcp:EventConfig`, required): Function and RDF type for delete events.
 
 **`rdfcp:EventConfig` parameters:**
 
-- `rdfcp:function` (`string`, required): FnO function IRI used for the event.
-- `rdfcp:type` (`string`, required): RDF type IRI emitted for the event.
+- `rdfcp:function` (`string` or IRI, required): FnO function IRI used for the event.
+- `rdfcp:type` (`string` or IRI, required): RDF type IRI emitted for the event.
 
 **`rdfcp:LDESTargetConfig` parameters:**
 
 - `rdfcp:targetPath` (`string`, required): Output path used in the generated logical target.
-- `rdfcp:timestampPath` (`string`, required): LDES timestamp path.
-- `rdfcp:versionOfPath` (`string`, required): LDES version-of path.
-- `rdfcp:serialization` (`string`, required): RML target serialization IRI.
+- `rdfcp:timestampPath` (`string` or IRI, required): LDES timestamp path.
+- `rdfcp:versionOfPath` (`string` or IRI, required): LDES version-of path.
+- `rdfcp:serialization` (`string` or IRI, required): RML target serialization IRI.
 - `rdfcp:uniqueIRIs` (`boolean`, required): Whether generated LDES members should use immutable IRIs.
-- `rdfcp:ldesBaseIRI` (`string`, optional): Base IRI of the generated LDES.
-- `rdfcp:shape` (`string`, optional): TREE shape IRI for the generated LDES.
+- `rdfcp:ldesBaseIRI` (`string` or IRI, optional): Base IRI of the generated LDES.
+- `rdfcp:shape` (`string` or IRI, optional): TREE shape IRI for the generated LDES.
 
 Example:
 

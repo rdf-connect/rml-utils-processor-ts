@@ -211,7 +211,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
   sh:targetClass rdfcp:LifeCycleConfig;
   sh:property [
     sh:path rdfcp:predicate;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "predicate";
     sh:name "Life cycle predicate";
     sh:description "Predicate that describes the life cycle event type.";
@@ -247,7 +248,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
   sh:targetClass rdfcp:EventConfig;
   sh:property [
     sh:path rdfcp:function;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "function";
     sh:name "Function";
     sh:description "IRI of the FnO function used for the event.";
@@ -255,7 +257,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:type;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "type";
     sh:name "Event type";
     sh:description "IRI of the RDF type emitted for the event.";
@@ -275,7 +278,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:timestampPath;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "timestampPath";
     sh:name "Timestamp path";
     sh:description "LDES timestamp path.";
@@ -283,7 +287,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:versionOfPath;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "versionOfPath";
     sh:name "Version-of path";
     sh:description "LDES version-of path.";
@@ -291,7 +296,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:serialization;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "serialization";
     sh:name "Serialization";
     sh:description "IRI of the RML target serialization, such as formats:N-Triples.";
@@ -307,7 +313,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:ldesBaseIRI;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "ldesBaseIRI";
     sh:name "LDES base IRI";
     sh:description "Base IRI of the generated LDES.";
@@ -315,7 +322,8 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:shape;
-    sh:datatype xsd:string;
+    sh:nodeKind sh:IRIOrLiteral;
+    sh:codeType xsd:string;
     sh:codeIdentifier "shape";
     sh:name "Shape";
     sh:description "IRI of the TREE shape of the generated LDES.";
