@@ -30,82 +30,83 @@ Next, add the processor definitions to your pipeline configuration:
 
 ```turtle
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 
 <> owl:imports <./node_modules/@rdfc/rml-utils-processor-ts/processors.ttl>.
 ```
 
-The RML mapper processor executes a Java RMLMapper jar. If `rdfc:rmlJar` is omitted, the processor downloads the default RMLMapper release to `/tmp` and reuses it for the process lifetime.
+The RML mapper processor executes a Java RMLMapper jar. If `rdfcp:rmlJar` is omitted, the processor downloads the default RMLMapper release to `/tmp` and reuses it for the process lifetime.
 
 ## Processors and Configuration
 
-### `rdfc:Yarrrml2RML` - YARRRML to RML Transformer
+### `rdfcp:Yarrrml2RML` - YARRRML to RML Transformer
 
 Transforms YARRRML mapping documents into RML mapping documents.
 
 **Parameters:**
 
-- `rdfc:input` (`rdfc:Reader`, required): Input channel that streams YARRRML mapping documents as strings.
-- `rdfc:output` (`rdfc:Writer`, required): Output channel that receives generated RML mappings.
+- `rdfcp:input` (`rdfc:Reader`, required): Input channel that streams YARRRML mapping documents as strings.
+- `rdfcp:output` (`rdfc:Writer`, required): Output channel that receives generated RML mappings.
 
 Example:
 
 ```turtle
-<yarrrml2rml> a rdfc:Yarrrml2RML;
-    rdfc:input <yarrrmlStream>;
-    rdfc:output <rmlStream>.
+<yarrrml2rml> a rdfcp:Yarrrml2RML;
+    rdfcp:input <yarrrmlStream>;
+    rdfcp:output <rmlStream>.
 ```
 
 ---
 
-### `rdfc:RMLMapperJS` - RML Mapper Processor
+### `rdfcp:RMLMapperJS` - RML Mapper Processor
 
 Executes RML mapping documents by wrapping the Java-based [RMLMapper](https://github.com/RMLio/rmlmapper-java) and streams the produced RDF to RDF-Connect channels.
 
-The processor reads one or more RML mapping documents from `rdfc:mappings`. It can optionally receive RDF-Connect managed logical sources and logical targets. Declared logical sources are written to temporary files and matched against `rml:source` values in the mapping documents. Declared logical targets are matched against `void:dataDump` values in `rmlt:LogicalTarget` or `rmlt:EventStreamTarget` definitions.
+The processor reads one or more RML mapping documents from `rdfcp:mappings`. It can optionally receive RDF-Connect managed logical sources and logical targets. Declared logical sources are written to temporary files and matched against `rml:source` values in the mapping documents. Declared logical targets are matched against `void:dataDump` values in `rmlt:LogicalTarget` or `rmlt:EventStreamTarget` definitions.
 
 **Parameters:**
 
-- `rdfc:mappings` (`rdfc:Reader`, required): Input channel that streams RML mapping documents.
-- `rdfc:output` (`rdfc:Writer`, required): Default output channel for RDF produced by mappings without an explicit logical target.
-- `rdfc:rmlSource` (`rdfc:RmlSource`, optional): RDF-Connect managed logical source declarations.
-- `rdfc:rmlTarget` (`rdfc:RmlTarget`, optional): RDF-Connect managed logical target declarations.
-- `rdfc:rmlJar` (`string` or IRI, optional): Path or URL to an RMLMapper jar. If omitted, the default RMLMapper jar is downloaded automatically.
+- `rdfcp:mappings` (`rdfc:Reader`, required): Input channel that streams RML mapping documents.
+- `rdfcp:output` (`rdfc:Writer`, required): Default output channel for RDF produced by mappings without an explicit logical target.
+- `rdfcp:rmlSource` (`rdfcp:RmlSource`, optional): RDF-Connect managed logical source declarations.
+- `rdfcp:rmlTarget` (`rdfcp:RmlTarget`, optional): RDF-Connect managed logical target declarations.
+- `rdfcp:rmlJar` (`string` or IRI, optional): Path or URL to an RMLMapper jar. If omitted, the default RMLMapper jar is downloaded automatically.
 
-**`rdfc:RmlSource` parameters:**
+**`rdfcp:RmlSource` parameters:**
 
-- `rdfc:sourceLocation` (`string`, required): Source location as referenced by `rml:source` in the mapping document.
-- `rdfc:input` (`rdfc:Reader`, required): Channel that provides source data.
-- `rdfc:trigger` (`boolean`, optional): If true, this source can trigger additional mapping executions when new data arrives. Default: `false`.
-- `rdfc:incRMLStateIndex` (`string`, optional): Regex used to extract a source identifier from incoming data. The first capture group is appended to IncRML state paths so independent datasets coming via the same Logical Source can keep a separate state.
+- `rdfcp:sourceLocation` (`string`, required): Source location as referenced by `rml:source` in the mapping document.
+- `rdfcp:input` (`rdfc:Reader`, required): Channel that provides source data.
+- `rdfcp:trigger` (`boolean`, optional): If true, this source can trigger additional mapping executions when new data arrives. Default: `false`.
+- `rdfcp:incRMLStateIndex` (`string`, optional): Regex used to extract a source identifier from incoming data. The first capture group is appended to IncRML state paths so independent datasets coming via the same Logical Source can keep a separate state.
 
-**`rdfc:RmlTarget` parameters:**
+**`rdfcp:RmlTarget` parameters:**
 
-- `rdfc:targetLocation` (`string` or IRI, required): Target location as referenced by `void:dataDump` in the mapping document. It is compared as is, so an IRI must be absolute, like `<file:///results/output.nq>`: a relative one is resolved against the pipeline and no longer matches.
-- `rdfc:output` (`rdfc:Writer`, required): Channel that receives RDF written to that logical target.
+- `rdfcp:targetLocation` (`string` or IRI, required): Target location as referenced by `void:dataDump` in the mapping document. It is compared as is, so an IRI must be absolute, like `<file:///results/output.nq>`: a relative one is resolved against the pipeline and no longer matches.
+- `rdfcp:output` (`rdfc:Writer`, required): Channel that receives RDF written to that logical target.
 
 Example:
 
 ```turtle
-<mapper> a rdfc:RMLMapperJS;
-    rdfc:mappings <rmlStream>;
-    rdfc:output <defaultOutput>;
-    rdfc:rmlSource [
-        rdfc:sourceLocation "dataset/data.xml";
-        rdfc:input <dataInput>;
-        rdfc:trigger true;
-        rdfc:incRMLStateIndex "source_id=\"([^\"]+)\""
+<mapper> a rdfcp:RMLMapperJS;
+    rdfcp:mappings <rmlStream>;
+    rdfcp:output <defaultOutput>;
+    rdfcp:rmlSource [
+        rdfcp:sourceLocation "dataset/data.xml";
+        rdfcp:input <dataInput>;
+        rdfcp:trigger true;
+        rdfcp:incRMLStateIndex "source_id=\"([^\"]+)\""
     ];
-    rdfc:rmlTarget [
-        rdfc:targetLocation "file:///results/output.nq";
-        rdfc:output <targetOutput>
+    rdfcp:rmlTarget [
+        rdfcp:targetLocation "file:///results/output.nq";
+        rdfcp:output <targetOutput>
     ];
-    rdfc:rmlJar "./rmlmapper-7.0.0-r374-all.jar".
+    rdfcp:rmlJar "./rmlmapper-7.0.0-r374-all.jar".
 ```
 
 ---
 
-### `rdfc:IncRMLTransformer` - Incremental RML Transformer
+### `rdfcp:IncRMLTransformer` - Incremental RML Transformer
 
 Transforms RML mapping documents into Incremental RML documents.
 
@@ -115,77 +116,78 @@ An optional LDES target configuration can be provided to generate LDES metadata 
 
 **Parameters:**
 
-- `rdfc:rmlStream` (`rdfc:Reader`, required): Input channel that streams RML mapping documents.
-- `rdfc:config` (`rdfc:IncRMLConfig`, required): IncRML transformation configuration.
-- `rdfc:incrmlStream` (`rdfc:Writer`, required): Output channel that receives IncRML mapping documents.
+- `rdfcp:rmlStream` (`rdfc:Reader`, required): Input channel that streams RML mapping documents.
+- `rdfcp:config` (`rdfcp:IncRMLConfig`, required): IncRML transformation configuration.
+- `rdfcp:incrmlStream` (`rdfc:Writer`, required): Output channel that receives IncRML mapping documents.
 
-**`rdfc:IncRMLConfig` parameters:**
+**`rdfcp:IncRMLConfig` parameters:**
 
-- `rdfc:stateBasePath` (`string` or IRI, required): Base path used for generated IncRML state files.
-- `rdfc:lifeCycleConfig` (`rdfc:LifeCycleConfig`, required): Lifecycle predicate and function configuration.
-- `rdfc:targetConfig` (`rdfc:LDESTargetConfig`, optional): LDES logical target configuration.
+- `rdfcp:stateBasePath` (`string` or IRI, required): Base path used for generated IncRML state files.
+- `rdfcp:lifeCycleConfig` (`rdfcp:LifeCycleConfig`, required): Lifecycle predicate and function configuration.
+- `rdfcp:targetConfig` (`rdfcp:LDESTargetConfig`, optional): LDES logical target configuration.
 
-**`rdfc:LifeCycleConfig` parameters:**
+**`rdfcp:LifeCycleConfig` parameters:**
 
-- `rdfc:predicate` (`string`, required): Predicate used to describe the lifecycle event type.
-- `rdfc:create` (`rdfc:EventConfig`, required): Function and RDF type for create events.
-- `rdfc:update` (`rdfc:EventConfig`, required): Function and RDF type for update events.
-- `rdfc:delete` (`rdfc:EventConfig`, required): Function and RDF type for delete events.
+- `rdfcp:predicate` (`string`, required): Predicate used to describe the lifecycle event type.
+- `rdfcp:create` (`rdfcp:EventConfig`, required): Function and RDF type for create events.
+- `rdfcp:update` (`rdfcp:EventConfig`, required): Function and RDF type for update events.
+- `rdfcp:delete` (`rdfcp:EventConfig`, required): Function and RDF type for delete events.
 
-**`rdfc:EventConfig` parameters:**
+**`rdfcp:EventConfig` parameters:**
 
-- `rdfc:function` (`string`, required): FnO function IRI used for the event.
-- `rdfc:type` (`string`, required): RDF type IRI emitted for the event.
+- `rdfcp:function` (`string`, required): FnO function IRI used for the event.
+- `rdfcp:type` (`string`, required): RDF type IRI emitted for the event.
 
-**`rdfc:LDESTargetConfig` parameters:**
+**`rdfcp:LDESTargetConfig` parameters:**
 
-- `rdfc:targetPath` (`string`, required): Output path used in the generated logical target.
-- `rdfc:timestampPath` (`string`, required): LDES timestamp path.
-- `rdfc:versionOfPath` (`string`, required): LDES version-of path.
-- `rdfc:serialization` (`string`, required): RML target serialization IRI.
-- `rdfc:uniqueIRIs` (`boolean`, required): Whether generated LDES members should use immutable IRIs.
-- `rdfc:ldesBaseIRI` (`string`, optional): Base IRI of the generated LDES.
-- `rdfc:shape` (`string`, optional): TREE shape IRI for the generated LDES.
+- `rdfcp:targetPath` (`string`, required): Output path used in the generated logical target.
+- `rdfcp:timestampPath` (`string`, required): LDES timestamp path.
+- `rdfcp:versionOfPath` (`string`, required): LDES version-of path.
+- `rdfcp:serialization` (`string`, required): RML target serialization IRI.
+- `rdfcp:uniqueIRIs` (`boolean`, required): Whether generated LDES members should use immutable IRIs.
+- `rdfcp:ldesBaseIRI` (`string`, optional): Base IRI of the generated LDES.
+- `rdfcp:shape` (`string`, optional): TREE shape IRI for the generated LDES.
 
 Example:
 
 ```turtle
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 @prefix idlab-fn: <https://w3id.org/imec/idlab/function#>.
 @prefix as: <https://www.w3.org/ns/activitystreams#>.
 @prefix dc: <http://purl.org/dc/terms/>.
 @prefix formats: <http://www.w3.org/ns/formats/>.
 
-<incrml> a rdfc:IncRMLTransformer;
-    rdfc:rmlStream <rmlStream>;
-    rdfc:config [
-        rdfc:stateBasePath "./state";
-        rdfc:lifeCycleConfig [
-            rdfc:predicate "http://example.org/lifeCycleType";
-            rdfc:create [
-                rdfc:function idlab-fn:explicitCreate;
-                rdfc:type as:Create
+<incrml> a rdfcp:IncRMLTransformer;
+    rdfcp:rmlStream <rmlStream>;
+    rdfcp:config [
+        rdfcp:stateBasePath "./state";
+        rdfcp:lifeCycleConfig [
+            rdfcp:predicate "http://example.org/lifeCycleType";
+            rdfcp:create [
+                rdfcp:function idlab-fn:explicitCreate;
+                rdfcp:type as:Create
             ];
-            rdfc:update [
-                rdfc:function idlab-fn:implicitUpdate;
-                rdfc:type as:Update
+            rdfcp:update [
+                rdfcp:function idlab-fn:implicitUpdate;
+                rdfcp:type as:Update
             ];
-            rdfc:delete [
-                rdfc:function idlab-fn:implicitDelete;
-                rdfc:type as:Delete
+            rdfcp:delete [
+                rdfcp:function idlab-fn:implicitDelete;
+                rdfcp:type as:Delete
             ]
         ];
-        rdfc:targetConfig [
-            rdfc:targetPath "./output.nt";
-            rdfc:timestampPath dc:modified;
-            rdfc:versionOfPath dc:isVersionOf;
-            rdfc:serialization formats:N-Triples;
-            rdfc:uniqueIRIs true;
-            rdfc:ldesBaseIRI "http://example.org/my-ldes";
-            rdfc:shape "http://example.org/my-ldes/shape"
+        rdfcp:targetConfig [
+            rdfcp:targetPath "./output.nt";
+            rdfcp:timestampPath dc:modified;
+            rdfcp:versionOfPath dc:isVersionOf;
+            rdfcp:serialization formats:N-Triples;
+            rdfcp:uniqueIRIs true;
+            rdfcp:ldesBaseIRI "http://example.org/my-ldes";
+            rdfcp:shape "http://example.org/my-ldes/shape"
         ]
     ];
-    rdfc:incrmlStream <incrmlStream>.
+    rdfcp:incrmlStream <incrmlStream>.
 ```
 
 ## Example Pipelines
@@ -194,6 +196,7 @@ Example:
 
 ```turtle
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 
 <> owl:imports <./node_modules/@rdfc/rml-utils-processor-ts/processors.ttl>.
@@ -201,15 +204,16 @@ Example:
 <yarrrmlStream> a rdfc:Reader, rdfc:Writer.
 <rmlStream> a rdfc:Reader, rdfc:Writer.
 
-<yarrrml2rml> a rdfc:Yarrrml2RML;
-    rdfc:input <yarrrmlStream>;
-    rdfc:output <rmlStream>.
+<yarrrml2rml> a rdfcp:Yarrrml2RML;
+    rdfcp:input <yarrrmlStream>;
+    rdfcp:output <rmlStream>.
 ```
 
 ### Example 2: Run RML mappings over managed source data
 
 ```turtle
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 
 <> owl:imports <./node_modules/@rdfc/rml-utils-processor-ts/processors.ttl>.
@@ -219,16 +223,16 @@ Example:
 <defaultOutput> a rdfc:Reader, rdfc:Writer.
 <targetOutput> a rdfc:Reader, rdfc:Writer.
 
-<mapper> a rdfc:RMLMapperJS;
-    rdfc:mappings <rmlStream>;
-    rdfc:output <defaultOutput>;
-    rdfc:rmlSource [
-        rdfc:sourceLocation "dataset/data.xml";
-        rdfc:input <dataInput>
+<mapper> a rdfcp:RMLMapperJS;
+    rdfcp:mappings <rmlStream>;
+    rdfcp:output <defaultOutput>;
+    rdfcp:rmlSource [
+        rdfcp:sourceLocation "dataset/data.xml";
+        rdfcp:input <dataInput>
     ];
-    rdfc:rmlTarget [
-        rdfc:targetLocation "file:///results/output.nq";
-        rdfc:output <targetOutput>
+    rdfcp:rmlTarget [
+        rdfcp:targetLocation "file:///results/output.nq";
+        rdfcp:output <targetOutput>
     ].
 ```
 
@@ -236,6 +240,7 @@ Example:
 
 ```turtle
 @prefix rdfc: <https://w3id.org/rdf-connect#>.
+@prefix rdfcp: <https://w3id.org/rdf-connect/processors#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix idlab-fn: <https://w3id.org/imec/idlab/function#>.
 @prefix as: <https://www.w3.org/ns/activitystreams#>.
@@ -247,25 +252,25 @@ Example:
 <dataInput> a rdfc:Reader, rdfc:Writer.
 <output> a rdfc:Reader, rdfc:Writer.
 
-<incrml> a rdfc:IncRMLTransformer;
-    rdfc:rmlStream <rmlStream>;
-    rdfc:config [
-        rdfc:stateBasePath "./state";
-        rdfc:lifeCycleConfig [
-            rdfc:predicate "http://example.org/lifeCycleType";
-            rdfc:create [ rdfc:function idlab-fn:explicitCreate; rdfc:type as:Create ];
-            rdfc:update [ rdfc:function idlab-fn:implicitUpdate; rdfc:type as:Update ];
-            rdfc:delete [ rdfc:function idlab-fn:implicitDelete; rdfc:type as:Delete ]
+<incrml> a rdfcp:IncRMLTransformer;
+    rdfcp:rmlStream <rmlStream>;
+    rdfcp:config [
+        rdfcp:stateBasePath "./state";
+        rdfcp:lifeCycleConfig [
+            rdfcp:predicate "http://example.org/lifeCycleType";
+            rdfcp:create [ rdfcp:function idlab-fn:explicitCreate; rdfcp:type as:Create ];
+            rdfcp:update [ rdfcp:function idlab-fn:implicitUpdate; rdfcp:type as:Update ];
+            rdfcp:delete [ rdfcp:function idlab-fn:implicitDelete; rdfcp:type as:Delete ]
         ]
     ];
-    rdfc:incrmlStream <incrmlStream>.
+    rdfcp:incrmlStream <incrmlStream>.
 
-<mapper> a rdfc:RMLMapperJS;
-    rdfc:mappings <incrmlStream>;
-    rdfc:output <output>;
-    rdfc:rmlSource [
-        rdfc:sourceLocation "dataset/data.xml";
-        rdfc:input <dataInput>;
-        rdfc:trigger true
+<mapper> a rdfcp:RMLMapperJS;
+    rdfcp:mappings <incrmlStream>;
+    rdfcp:output <output>;
+    rdfcp:rmlSource [
+        rdfcp:sourceLocation "dataset/data.xml";
+        rdfcp:input <dataInput>;
+        rdfcp:trigger true
     ].
 ```

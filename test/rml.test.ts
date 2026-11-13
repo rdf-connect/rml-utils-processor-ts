@@ -535,7 +535,7 @@ describe("Functional tests for the RMLMapperJS processor", () => {
 
             const warnings = warn.mock.calls.map(([message]) => String(message));
             expect(warnings.filter((m) => m.includes("matches no void:dataDump"))).toEqual([
-                expect.stringContaining("rdfc:rmlTarget file:///home/me/pipeline/results/output.nq "),
+                expect.stringContaining("rdfcp:rmlTarget file:///home/me/pipeline/results/output.nq "),
             ]);
             expect((await targetOut).length).toBeGreaterThan(0);
             expect((await otherOut).join("").trim()).toBe("");
