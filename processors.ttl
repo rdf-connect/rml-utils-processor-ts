@@ -21,13 +21,15 @@ rdfc:Yarrrml2RML a owl:Class, rdfs:Class;
     sh:path rdfc:input;
     sh:maxCount 1;
     sh:minCount 1;
-    sh:name "reader";
+    sh:codeIdentifier "reader";
+    sh:name "Input channel";
   ], [
     sh:class rdfc:Writer;
     sh:path rdfc:output;
     sh:maxCount 1;
     sh:minCount 1;
-    sh:name "writer";
+    sh:codeIdentifier "writer";
+    sh:name "Output channel";
   ].
 
 rdfc:RMLMapperJS a owl:Class, rdfs:Class;
@@ -43,25 +45,29 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
   sh:property [
     sh:path rdfc:sourceLocation;
     sh:datatype xsd:string;
-    sh:name "location";
+    sh:codeIdentifier "location";
+    sh:name "Source location";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
     sh:path rdfc:input;
     sh:class rdfc:Reader;
-    sh:name "dataInput";
+    sh:codeIdentifier "dataInput";
+    sh:name "Input channel";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
     sh:path rdfc:trigger;
     sh:datatype xsd:boolean;
-    sh:name "trigger";
+    sh:codeIdentifier "trigger";
+    sh:name "Trigger";
     sh:defaultValue false;
     sh:maxCount 1;
   ], [
     sh:path rdfc:incRMLStateIndex;
     sh:datatype xsd:string;
-    sh:name "incRMLStateIndex";
+    sh:codeIdentifier "incRMLStateIndex";
+    sh:name "IncRML state index";
     sh:minCount 0;
     sh:maxCount 1;
   ].
@@ -72,13 +78,15 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
     sh:path rdfc:targetLocation;
     sh:nodeKind sh:IRIOrLiteral;
     sh:codeType xsd:string;
-    sh:name "location";
+    sh:codeIdentifier "location";
+    sh:name "Target location";
     sh:maxCount 1;
     sh:minCount 1;
   ], [
     sh:path rdfc:output;
     sh:class rdfc:Writer;
-    sh:name "writer";
+    sh:codeIdentifier "writer";
+    sh:name "Output channel";
     sh:maxCount 1;
     sh:minCount 1;
   ].
@@ -87,29 +95,34 @@ rdfc:RMLMapperJS a owl:Class, rdfs:Class;
   sh:targetClass rdfc:RMLMapperJS;
   sh:property [
     sh:path rdfc:mappings;
-    sh:name "mappingInput";
+    sh:codeIdentifier "mappingInput";
+    sh:name "Input channel";
     sh:class rdfc:Reader;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
     sh:path rdfc:output;
-    sh:name "defaultWriter";
+    sh:codeIdentifier "defaultWriter";
+    sh:name "Output channel";
     sh:class rdfc:Writer;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
     sh:path rdfc:rmlSource;
-    sh:name "sources";
+    sh:codeIdentifier "sources";
+    sh:name "Logical sources";
     sh:class rdfc:RmlSource;
     sh:minCount 0;
   ], [
     sh:path rdfc:rmlTarget;
-    sh:name "targets";
+    sh:codeIdentifier "targets";
+    sh:name "Logical targets";
     sh:class rdfc:RmlTarget;
     sh:minCount 0;
   ], [
     sh:path rdfc:rmlJar;
-    sh:name "jarLocation";
+    sh:codeIdentifier "jarLocation";
+    sh:name "RMLMapper jar";
     sh:nodeKind sh:IRIOrLiteral;
     sh:codeType xsd:string;
     sh:minCount 0;
@@ -128,19 +141,22 @@ rdfc:IncRMLTransformer a rdfc:Processor;
   sh:targetClass rdfc:IncRMLTransformer;
   sh:property [
     sh:path rdfc:rmlStream;
-    sh:name "rmlStream";
+    sh:codeIdentifier "rmlStream";
+    sh:name "Input channel";
     sh:class rdfc:Reader;
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:config;
-    sh:name "config";
+    sh:codeIdentifier "config";
+    sh:name "Configuration";
     sh:class rdfc:IncRMLConfig;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
     sh:path rdfc:incrmlStream;
-    sh:name "incrmlStream";
+    sh:codeIdentifier "incrmlStream";
+    sh:name "Output channel";
     sh:class rdfc:Writer;
     sh:minCount 1;
     sh:maxCount 1
@@ -152,19 +168,22 @@ rdfc:IncRMLTransformer a rdfc:Processor;
     sh:path rdfc:stateBasePath;
     sh:nodeKind sh:IRIOrLiteral;
     sh:codeType xsd:string;
-    sh:name "stateBasePath";
+    sh:codeIdentifier "stateBasePath";
+    sh:name "State base path";
     sh:maxCount 1;
     sh:minCount 1
   ], [
     sh:path rdfc:lifeCycleConfig;
     sh:class rdfc:LifeCycleConfig;
-    sh:name "lifeCycleConfig";
+    sh:codeIdentifier "lifeCycleConfig";
+    sh:name "Life cycle configuration";
     sh:maxCount 1;
     sh:minCount 1
   ], [
     sh:path rdfc:targetConfig;
     sh:class rdfc:LDESTargetConfig;
-    sh:name "targetConfig";
+    sh:codeIdentifier "targetConfig";
+    sh:name "LDES target configuration";
     sh:minCount 0;
     sh:maxCount 1
   ].
@@ -174,25 +193,29 @@ rdfc:IncRMLTransformer a rdfc:Processor;
   sh:property [
     sh:path rdfc:predicate;
     sh:datatype xsd:string;
-    sh:name "predicate";
+    sh:codeIdentifier "predicate";
+    sh:name "Life cycle predicate";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:create;
     sh:class rdfc:EventConfig;
-    sh:name "create";
+    sh:codeIdentifier "create";
+    sh:name "Create event";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:update;
     sh:class rdfc:EventConfig;
-    sh:name "update";
+    sh:codeIdentifier "update";
+    sh:name "Update event";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:delete;
     sh:class rdfc:EventConfig;
-    sh:name "delete";
+    sh:codeIdentifier "delete";
+    sh:name "Delete event";
     sh:minCount 1;
     sh:maxCount 1
   ].
@@ -202,13 +225,15 @@ rdfc:IncRMLTransformer a rdfc:Processor;
   sh:property [
     sh:path rdfc:function;
     sh:datatype xsd:string;
-    sh:name "function";
+    sh:codeIdentifier "function";
+    sh:name "Function";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:type;
     sh:datatype xsd:string;
-    sh:name "type";
+    sh:codeIdentifier "type";
+    sh:name "Event type";
     sh:minCount 1;
     sh:maxCount 1
   ].
@@ -218,43 +243,50 @@ rdfc:IncRMLTransformer a rdfc:Processor;
   sh:property [
     sh:path rdfc:targetPath;
     sh:datatype xsd:string;
-    sh:name "targetPath";
+    sh:codeIdentifier "targetPath";
+    sh:name "Target path";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:timestampPath;
     sh:datatype xsd:string;
-    sh:name "timestampPath";
+    sh:codeIdentifier "timestampPath";
+    sh:name "Timestamp path";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:versionOfPath;
     sh:datatype xsd:string;
-    sh:name "versionOfPath";
+    sh:codeIdentifier "versionOfPath";
+    sh:name "Version-of path";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:serialization;
     sh:datatype xsd:string;
-    sh:name "serialization";
+    sh:codeIdentifier "serialization";
+    sh:name "Serialization";
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:uniqueIRIs;
-    sh:name "uniqueIRIs";
+    sh:codeIdentifier "uniqueIRIs";
+    sh:name "Unique IRIs";
     sh:datatype xsd:boolean;
     sh:minCount 1;
     sh:maxCount 1
   ], [
     sh:path rdfc:ldesBaseIRI;
     sh:datatype xsd:string;
-    sh:name "ldesBaseIRI";
+    sh:codeIdentifier "ldesBaseIRI";
+    sh:name "LDES base IRI";
     sh:minCount 0;
     sh:maxCount 1
   ], [
     sh:path rdfc:shape;
     sh:datatype xsd:string;
-    sh:name "shape";
+    sh:codeIdentifier "shape";
+    sh:name "Shape";
     sh:minCount 0;
     sh:maxCount 1
   ].
