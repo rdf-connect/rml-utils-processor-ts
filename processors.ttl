@@ -42,8 +42,7 @@ rdfcp:RMLMapperJS a owl:Class, rdfs:Class;
   rdfc:class "RMLMapperJS";
   rdfc:entrypoint <./>.
 
-[ ] a sh:NodeShape;
-  sh:targetClass rdfcp:RmlSource;
+rdfcp:RmlSourceShape a sh:NodeShape;
   sh:property [
     sh:path rdfcp:sourceLocation;
     sh:datatype xsd:string;
@@ -78,8 +77,7 @@ rdfcp:RMLMapperJS a owl:Class, rdfs:Class;
     sh:maxCount 1;
   ].
 
-[ ] a sh:NodeShape;
-  sh:targetClass rdfcp:RmlTarget;
+rdfcp:RmlTargetShape a sh:NodeShape;
   sh:property [
     sh:path rdfcp:targetLocation;
     sh:nodeKind sh:IRIOrLiteral;
@@ -122,14 +120,14 @@ rdfcp:RMLMapperJS a owl:Class, rdfs:Class;
     sh:codeIdentifier "sources";
     sh:name "Logical sources";
     sh:description "Logical sources managed by RDF-Connect, written to temporary files and matched against rml:source in the mapping documents.";
-    sh:class rdfcp:RmlSource;
+    sh:node rdfcp:RmlSourceShape;
     sh:minCount 0;
   ], [
     sh:path rdfcp:rmlTarget;
     sh:codeIdentifier "targets";
     sh:name "Logical targets";
     sh:description "Logical targets managed by RDF-Connect, matched against void:dataDump in the logical targets of the mapping documents.";
-    sh:class rdfcp:RmlTarget;
+    sh:node rdfcp:RmlTargetShape;
     sh:minCount 0;
   ], [
     sh:path rdfcp:rmlJar;
@@ -165,7 +163,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:codeIdentifier "config";
     sh:name "Configuration";
     sh:description "IncRML transformation configuration.";
-    sh:class rdfcp:IncRMLConfig;
+    sh:node rdfcp:IncRMLConfigShape;
     sh:minCount 1;
     sh:maxCount 1;
   ], [
@@ -178,8 +176,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ].
 
-[ ] a sh:NodeShape;
-  sh:targetClass rdfcp:IncRMLConfig;
+rdfcp:IncRMLConfigShape a sh:NodeShape;
   sh:property [
     sh:path rdfcp:stateBasePath;
     sh:nodeKind sh:IRIOrLiteral;
@@ -191,7 +188,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:minCount 1
   ], [
     sh:path rdfcp:lifeCycleConfig;
-    sh:class rdfcp:LifeCycleConfig;
+    sh:node rdfcp:LifeCycleConfigShape;
     sh:codeIdentifier "lifeCycleConfig";
     sh:name "Life cycle configuration";
     sh:description "Life cycle predicate, and the function and RDF type of the create, update and delete events.";
@@ -199,7 +196,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:minCount 1
   ], [
     sh:path rdfcp:targetConfig;
-    sh:class rdfcp:LDESTargetConfig;
+    sh:node rdfcp:LDESTargetConfigShape;
     sh:codeIdentifier "targetConfig";
     sh:name "LDES target configuration";
     sh:description "LDES logical target to generate, with LDES metadata and unique immutable IRIs.";
@@ -207,8 +204,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ].
 
-[ ] a sh:NodeShape;
-  sh:targetClass rdfcp:LifeCycleConfig;
+rdfcp:LifeCycleConfigShape a sh:NodeShape;
   sh:property [
     sh:path rdfcp:predicate;
     sh:nodeKind sh:IRIOrLiteral;
@@ -220,7 +216,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:create;
-    sh:class rdfcp:EventConfig;
+    sh:node rdfcp:EventConfigShape;
     sh:codeIdentifier "create";
     sh:name "Create event";
     sh:description "Function and RDF type of create events.";
@@ -228,7 +224,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:update;
-    sh:class rdfcp:EventConfig;
+    sh:node rdfcp:EventConfigShape;
     sh:codeIdentifier "update";
     sh:name "Update event";
     sh:description "Function and RDF type of update events.";
@@ -236,7 +232,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ], [
     sh:path rdfcp:delete;
-    sh:class rdfcp:EventConfig;
+    sh:node rdfcp:EventConfigShape;
     sh:codeIdentifier "delete";
     sh:name "Delete event";
     sh:description "Function and RDF type of delete events.";
@@ -244,8 +240,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ].
 
-[ ] a sh:NodeShape;
-  sh:targetClass rdfcp:EventConfig;
+rdfcp:EventConfigShape a sh:NodeShape;
   sh:property [
     sh:path rdfcp:function;
     sh:nodeKind sh:IRIOrLiteral;
@@ -266,8 +261,7 @@ rdfcp:IncRMLTransformer a owl:Class, rdfs:Class;
     sh:maxCount 1
   ].
 
-[ ] a sh:NodeShape;
-  sh:targetClass rdfcp:LDESTargetConfig;
+rdfcp:LDESTargetConfigShape a sh:NodeShape;
   sh:property [
     sh:path rdfcp:targetPath;
     sh:datatype xsd:string;

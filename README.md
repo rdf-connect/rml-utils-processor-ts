@@ -69,18 +69,18 @@ The processor reads one or more RML mapping documents from `rdfcp:input`. It can
 
 - `rdfcp:input` (`rdfc:Reader`, required): Input channel that streams RML mapping documents.
 - `rdfcp:output` (`rdfc:Writer`, required): Default output channel for RDF produced by mappings without an explicit logical target.
-- `rdfcp:rmlSource` (`rdfcp:RmlSource`, optional): RDF-Connect managed logical source declarations.
-- `rdfcp:rmlTarget` (`rdfcp:RmlTarget`, optional): RDF-Connect managed logical target declarations.
+- `rdfcp:rmlSource` (`rdfcp:RmlSourceShape`, optional): RDF-Connect managed logical source declarations.
+- `rdfcp:rmlTarget` (`rdfcp:RmlTargetShape`, optional): RDF-Connect managed logical target declarations.
 - `rdfcp:rmlJar` (`string` or IRI, optional): Path or URL to an RMLMapper jar. If omitted, the default RMLMapper jar is downloaded automatically.
 
-**`rdfcp:RmlSource` parameters:**
+**`rdfcp:RmlSourceShape` parameters:**
 
 - `rdfcp:sourceLocation` (`string`, required): Source location as referenced by `rml:source` in the mapping document.
 - `rdfcp:input` (`rdfc:Reader`, required): Channel that provides source data.
 - `rdfcp:trigger` (`boolean`, optional): If true, this source can trigger additional mapping executions when new data arrives. Default: `false`.
 - `rdfcp:incRMLStateIndex` (`string`, optional): Regex used to extract a source identifier from incoming data. The first capture group is appended to IncRML state paths so independent datasets coming via the same Logical Source can keep a separate state.
 
-**`rdfcp:RmlTarget` parameters:**
+**`rdfcp:RmlTargetShape` parameters:**
 
 - `rdfcp:targetLocation` (`string` or IRI, required): Target location as referenced by `void:dataDump` in the mapping document. It is compared as is, so an IRI must be absolute, like `<file:///results/output.nq>`: a relative one is resolved against the pipeline and no longer matches.
 - `rdfcp:output` (`rdfc:Writer`, required): Channel that receives RDF written to that logical target.
@@ -117,28 +117,28 @@ An optional LDES target configuration can be provided to generate LDES metadata 
 **Parameters:**
 
 - `rdfcp:input` (`rdfc:Reader`, required): Input channel that streams RML mapping documents.
-- `rdfcp:config` (`rdfcp:IncRMLConfig`, required): IncRML transformation configuration.
+- `rdfcp:config` (`rdfcp:IncRMLConfigShape`, required): IncRML transformation configuration.
 - `rdfcp:output` (`rdfc:Writer`, required): Output channel that receives IncRML mapping documents.
 
-**`rdfcp:IncRMLConfig` parameters:**
+**`rdfcp:IncRMLConfigShape` parameters:**
 
 - `rdfcp:stateBasePath` (`string` or IRI, required): Base path used for generated IncRML state files.
-- `rdfcp:lifeCycleConfig` (`rdfcp:LifeCycleConfig`, required): Lifecycle predicate and function configuration.
-- `rdfcp:targetConfig` (`rdfcp:LDESTargetConfig`, optional): LDES logical target configuration.
+- `rdfcp:lifeCycleConfig` (`rdfcp:LifeCycleConfigShape`, required): Lifecycle predicate and function configuration.
+- `rdfcp:targetConfig` (`rdfcp:LDESTargetConfigShape`, optional): LDES logical target configuration.
 
-**`rdfcp:LifeCycleConfig` parameters:**
+**`rdfcp:LifeCycleConfigShape` parameters:**
 
 - `rdfcp:predicate` (`string` or IRI, required): Predicate used to describe the lifecycle event type.
-- `rdfcp:create` (`rdfcp:EventConfig`, required): Function and RDF type for create events.
-- `rdfcp:update` (`rdfcp:EventConfig`, required): Function and RDF type for update events.
-- `rdfcp:delete` (`rdfcp:EventConfig`, required): Function and RDF type for delete events.
+- `rdfcp:create` (`rdfcp:EventConfigShape`, required): Function and RDF type for create events.
+- `rdfcp:update` (`rdfcp:EventConfigShape`, required): Function and RDF type for update events.
+- `rdfcp:delete` (`rdfcp:EventConfigShape`, required): Function and RDF type for delete events.
 
-**`rdfcp:EventConfig` parameters:**
+**`rdfcp:EventConfigShape` parameters:**
 
 - `rdfcp:function` (`string` or IRI, required): FnO function IRI used for the event.
 - `rdfcp:type` (`string` or IRI, required): RDF type IRI emitted for the event.
 
-**`rdfcp:LDESTargetConfig` parameters:**
+**`rdfcp:LDESTargetConfigShape` parameters:**
 
 - `rdfcp:targetPath` (`string`, required): Output path used in the generated logical target.
 - `rdfcp:timestampPath` (`string` or IRI, required): LDES timestamp path.
