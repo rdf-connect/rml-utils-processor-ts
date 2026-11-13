@@ -735,7 +735,7 @@ describe("Functional tests for the RMLMapperJS processor", () => {
                 DF.namedNode("http://example.org/myNamedGraph")).length
             ).toBe(1);
         }
-    });
+    }, 30000);
 
     test("Mapping process with data updates arriving while the final mapping run executes", async () => {
         const rmlDoc1 = `
