@@ -1,5 +1,5 @@
 import { Processor, type Reader, type Writer } from "@rdfc/js-runner";
-import { execFile } from "child_process";
+import { spawn } from "child_process";
 import { access, constants, readFile, unlink, writeFile } from "fs/promises";
 import {
     DataFactory,
@@ -98,7 +98,7 @@ export async function rmlMapper(
             source.hasData = false;
 
             // Consume source updates while preserving sequential mapping executions.
-            sourceReaders.push((async () => {
+            const reader = (async () => {
                 for await (const data of source.dataInput.strings()) {
                     executing = executing.then(async () => {
                         await handleDataUpdate(
@@ -113,8 +113,13 @@ export async function rmlMapper(
                             logger
                         );
                     });
+                    // A failed update or run ends this reader, so the failure surfaces while the sources stay open
+                    await executing;
                 }
-            })());
+            })();
+            // Awaited once the mappings are in; until then this keeps a failure from being reported as unhandled
+            reader.catch(() => {});
+            sourceReaders.push(reader);
         }
     }
 
@@ -193,7 +198,8 @@ export async function rmlMapper(
             }
         });
 
-        await Promise.all(sourceReaders);
+        // Await the run above together with the readers, so a failed run surfaces right away
+        await Promise.all([executing, ...sourceReaders]);
         await executing;
     } else {
         // No declared logical sources means that raw data access is delegated to the RML engine.
@@ -505,8 +511,9 @@ async function executeMappings(
     for (let mappingFile of mappingLocations) {
         const t0 = new Date();
         logger.info(`[rmlMapper processor] Running ${mappingFile}`);
-        // Without a shell, so a jar location with spaces stays one argument
-        const proc = execFile("java", ["-jar", jarFile, "-m", mappingFile, "-o", outputFile]);
+        // Without a shell, so a jar location with spaces stays one argument.
+        // Not execFile, which kills the process once its output passes maxBuffer.
+        const proc = spawn("java", ["-jar", jarFile, "-m", mappingFile, "-o", outputFile]);
         proc.stdout!.on("data", function (data) {
             logger.info(`[rmlMapper processor] rml mapper std: ${data.toString()}`);
         });
@@ -514,7 +521,7 @@ async function executeMappings(
             logger.error(`[rmlMapper processor] rml mapper err: ${data.toString()}`);
         });
 
-        await awaitProc(proc);
+        await awaitProc(proc, "RMLMapper");
 
         if (targets) {
             for (let target of targets) {

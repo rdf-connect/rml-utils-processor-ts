@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { randomUUID as cryptoUUID } from "crypto";
-import { ChildProcess, execFile } from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import { toPath } from "@rdfc/utils-js";
 
 const DEFAULT_URL =
@@ -41,8 +41,8 @@ export async function getJarFile(
     rmlJarPromise = (async function () {
       // Without a shell, so a location with spaces stays one argument
       console.log("Executing $ wget", url, "-O", location);
-      const proc = execFile("wget", [url, "-O", location]);
-      await awaitProc(proc);
+      const proc = spawn("wget", [url, "-O", location], { stdio: "ignore" });
+      await awaitProc(proc, "wget");
       return location;
     })();
   }
@@ -50,12 +50,13 @@ export async function getJarFile(
   return rmlJarPromise;
 }
 
-export function awaitProc(proc: ChildProcess): Promise<void> {
+export function awaitProc(proc: ChildProcess, name: string): Promise<void> {
   return new Promise((res, rej) => {
     proc.once("error", rej);
-    proc.once("close", (code) => {
+    proc.once("close", (code, signal) => {
       if (code === 0) res();
-      else rej(new Error(`process failed with exit code ${code}`));
+      else if (signal) rej(new Error(`${name} was killed by ${signal}`));
+      else rej(new Error(`${name} exited with code ${code}`));
     });
   });
 }
