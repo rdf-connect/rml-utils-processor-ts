@@ -1,4 +1,5 @@
 import { existsSync } from "fs";
+import { unlink } from "fs/promises";
 import { randomUUID as cryptoUUID } from "crypto";
 import { ChildProcess, spawn } from "child_process";
 import { toPath } from "@rdfc/utils-js";
@@ -42,7 +43,13 @@ export async function getJarFile(
       // Without a shell, so a location with spaces stays one argument
       console.log("Executing $ wget", url, "-O", location);
       const proc = spawn("wget", [url, "-O", location], { stdio: "ignore" });
-      await awaitProc(proc, "wget");
+      try {
+        await awaitProc(proc, "wget");
+      } catch (e) {
+        // wget -O leaves an empty or partial file, which a later start would take for the jar
+        await unlink(location).catch(() => {});
+        throw e;
+      }
       return location;
     })();
   }
