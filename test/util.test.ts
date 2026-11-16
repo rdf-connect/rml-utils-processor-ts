@@ -1,17 +1,17 @@
 import { describe, expect, test, vi } from "vitest";
 import { EventEmitter } from "events";
 
-const { execFile } = vi.hoisted(() => ({ execFile: vi.fn() }));
+const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }));
 vi.mock("child_process", async (original) => ({
   ...(await original<typeof import("child_process")>()),
-  execFile,
+  spawn,
 }));
 
 import { getJarFile } from "../src/util";
 
 describe("getJarFile", () => {
   test("downloads to a location with spaces as one argument, without a shell", async () => {
-    execFile.mockImplementation(() => {
+    spawn.mockImplementation(() => {
       const proc = new EventEmitter();
       setImmediate(() => proc.emit("close", 0));
       return proc;
@@ -22,10 +22,14 @@ describe("getJarFile", () => {
     );
 
     expect(location).toBe("/tmp/rml test dir/rmlmapper.jar");
-    expect(execFile).toHaveBeenCalledWith("wget", [
-      expect.stringMatching(/^https:\/\/.*\.jar$/),
-      "-O",
-      "/tmp/rml test dir/rmlmapper.jar",
-    ]);
+    expect(spawn).toHaveBeenCalledWith(
+      "wget",
+      [
+        expect.stringMatching(/^https:\/\/.*\.jar$/),
+        "-O",
+        "/tmp/rml test dir/rmlmapper.jar",
+      ],
+      { stdio: "ignore" },
+    );
   });
 });
